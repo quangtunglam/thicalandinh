@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   STORIES: 'tcd_stories_v1',
   SCHOLARS: 'tcd_scholars_v1',
   AUTH_TOKEN: 'tcd_admin_token',
+  AUTH_USER: 'tcd_admin_username',
 };
 
 // API Base URL - relative /api in production on Vercel
@@ -14,26 +15,33 @@ const API_BASE = '/api';
 
 export const apiService = {
   // --- AUTHENTICATION ---
-  async loginAdmin(password: string): Promise<{ success: boolean; token?: string; error?: string }> {
+  async loginAdmin(username: string, password: string): Promise<{ success: boolean; token?: string; error?: string }> {
     try {
       const res = await fetch(`${API_BASE}/auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
       if (data.success && data.token) {
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, data.token);
+        localStorage.setItem(STORAGE_KEYS.AUTH_USER, data.username || username);
         return { success: true, token: data.token };
       }
-      return { success: false, error: data.error || 'Sai mật khẩu!' };
+      return { success: false, error: data.error || 'Sai tài khoản hoặc mật khẩu!' };
     } catch {
       // Offline / Local fallback check
-      if (password === 'thicalandinh2026' || password === 'admin123') {
+      const validUser = username.trim().toLowerCase() === 'admin';
+      const validPass = password === 'thicalandinh2026' || password === 'admin123';
+      if (validUser && validPass) {
         localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, 'local-admin-token');
+        localStorage.setItem(STORAGE_KEYS.AUTH_USER, username);
         return { success: true, token: 'local-admin-token' };
       }
-      return { success: false, error: 'Mật khẩu quản trị không đúng (Mặc định: thicalandinh2026)' };
+      return {
+        success: false,
+        error: !validUser ? 'Tài khoản quản trị là: admin' : 'Mật khẩu quản trị không đúng (Mặc định: thicalandinh2026)'
+      };
     }
   },
 
@@ -41,8 +49,13 @@ export const apiService = {
     return !!localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
   },
 
+  getAdminUsername(): string {
+    return localStorage.getItem(STORAGE_KEYS.AUTH_USER) || 'Admin';
+  },
+
   logoutAdmin() {
     localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
   },
 
   getAuthToken(): string | null {
@@ -56,7 +69,6 @@ export const apiService = {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          // Normalize fields if from PostgreSQL
           const normalized: Poem[] = data.map((p: any) => ({
             id: p.id,
             slug: p.slug || p.id,
@@ -75,11 +87,8 @@ export const apiService = {
           return normalized;
         }
       }
-    } catch {
-      // Fallback
-    }
+    } catch {}
 
-    // LocalStorage / static fallback
     const local = localStorage.getItem(STORAGE_KEYS.POEMS);
     if (local) {
       try {
@@ -90,6 +99,10 @@ export const apiService = {
   },
 
   async savePoem(poem: Poem): Promise<boolean> {
+    if (!this.isAdminLoggedIn()) {
+      throw new Error('Chỉ có Quản trị viên (Admin) mới có quyền đăng hoặc sửa bài thơ!');
+    }
+
     const token = this.getAuthToken();
     try {
       const res = await fetch(`${API_BASE}/poems`, {
@@ -101,7 +114,6 @@ export const apiService = {
         body: JSON.stringify(poem),
       });
       if (res.ok) {
-        // Also update local cache
         const current = await this.getPoems();
         const existingIdx = current.findIndex(p => p.id === poem.id);
         if (existingIdx >= 0) {
@@ -114,7 +126,6 @@ export const apiService = {
       }
     } catch {}
 
-    // Save locally if API is offline
     const current = await this.getPoems();
     const existingIdx = current.findIndex(p => p.id === poem.id);
     if (existingIdx >= 0) {
@@ -127,6 +138,10 @@ export const apiService = {
   },
 
   async deletePoem(id: string): Promise<boolean> {
+    if (!this.isAdminLoggedIn()) {
+      throw new Error('Chỉ có Quản trị viên (Admin) mới có quyền xóa bài thơ!');
+    }
+
     const token = this.getAuthToken();
     try {
       await fetch(`${API_BASE}/poems?id=${id}`, {
@@ -175,6 +190,10 @@ export const apiService = {
   },
 
   async saveStory(story: Story): Promise<boolean> {
+    if (!this.isAdminLoggedIn()) {
+      throw new Error('Chỉ có Quản trị viên (Admin) mới có quyền đăng hoặc sửa bài viết!');
+    }
+
     const token = this.getAuthToken();
     try {
       await fetch(`${API_BASE}/stories`, {
@@ -199,6 +218,10 @@ export const apiService = {
   },
 
   async deleteStory(id: string): Promise<boolean> {
+    if (!this.isAdminLoggedIn()) {
+      throw new Error('Chỉ có Quản trị viên (Admin) mới có quyền xóa bài viết!');
+    }
+
     const token = this.getAuthToken();
     try {
       await fetch(`${API_BASE}/stories?id=${id}`, {
@@ -227,6 +250,10 @@ export const apiService = {
   },
 
   async saveScholar(scholar: Scholar): Promise<boolean> {
+    if (!this.isAdminLoggedIn()) {
+      throw new Error('Chỉ có Quản trị viên (Admin) mới có quyền quản lý danh nhân!');
+    }
+
     const current = await this.getScholars();
     const existingIdx = current.findIndex(s => s.slug === scholar.slug);
     if (existingIdx >= 0) {
@@ -239,6 +266,10 @@ export const apiService = {
   },
 
   async deleteScholar(slug: string): Promise<boolean> {
+    if (!this.isAdminLoggedIn()) {
+      throw new Error('Chỉ có Quản trị viên (Admin) mới có quyền quản lý danh nhân!');
+    }
+
     const current = await this.getScholars();
     const filtered = current.filter(s => s.slug !== slug);
     localStorage.setItem(STORAGE_KEYS.SCHOLARS, JSON.stringify(filtered));
@@ -247,6 +278,9 @@ export const apiService = {
 
   // Reset to default data
   resetAllData() {
+    if (!this.isAdminLoggedIn()) {
+      throw new Error('Chỉ có Quản trị viên (Admin) mới có quyền khôi phục dữ liệu!');
+    }
     localStorage.removeItem(STORAGE_KEYS.POEMS);
     localStorage.removeItem(STORAGE_KEYS.STORIES);
     localStorage.removeItem(STORAGE_KEYS.SCHOLARS);

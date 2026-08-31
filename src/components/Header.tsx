@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Search, Menu, X, PenTool } from 'lucide-react';
+import { Search, Menu, X, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiService } from '@/services/api';
 
@@ -60,17 +60,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSearch }) => {
           })}
         </nav>
 
-        {/* Actions (Search + Admin Link + Mobile Hamburger) */}
+        {/* Actions (Search + Admin Badge if logged in + Mobile Hamburger) */}
         <div className="flex items-center gap-2 md:gap-3">
-          {/* Admin / Post Article Button */}
-          <Link
-            href="/admin"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border border-primary/20 transition-all shadow-xs"
-            title="Đăng bài & Quản trị"
-          >
-            <PenTool className="w-3.5 h-3.5" />
-            <span>{isAdmin ? 'Quản Trị' : 'Đăng Bài'}</span>
-          </Link>
+          {/* ONLY SHOW ADMIN BADGE WHEN ADMIN IS LOGGED IN */}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm"
+              title="Khu vực Quản Trị Viên"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Quản Trị</span>
+            </Link>
+          )}
 
           <button
             onClick={onOpenSearch}
@@ -110,15 +112,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSearch }) => {
               </Link>
             );
           })}
-          <div className="pt-2 border-t border-border">
-            <Link
-              href="/admin"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 text-primary font-semibold py-2 text-sm"
-            >
-              <PenTool className="w-4 h-4" /> Đăng Bài & Quản Trị Hệ Thống
-            </Link>
-          </div>
+          {isAdmin && (
+            <div className="pt-2 border-t border-border">
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 text-primary font-semibold py-2 text-sm"
+              >
+                <Shield className="w-4 h-4" /> Bảng Điều Khiển Quản Trị
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </header>

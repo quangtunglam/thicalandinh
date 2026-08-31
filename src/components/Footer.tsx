@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowRight, Facebook, Youtube, Send, Check } from 'lucide-react';
+import { ArrowRight, Facebook, Youtube, Send, Check, Lock } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -137,7 +137,7 @@ export const Footer: React.FC = () => {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-foreground/60">
           <p>© 2024 Thi Ca Lan Đình. All rights reserved.</p>
-          <div className="flex flex-wrap justify-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-xs">
             <Link href="/terms" className="hover:text-primary transition-colors">
               Điều khoản sử dụng
             </Link>
@@ -146,6 +146,9 @@ export const Footer: React.FC = () => {
             </Link>
             <Link href="/contact" className="hover:text-primary transition-colors">
               Liên hệ
+            </Link>
+            <Link href="/admin" className="text-foreground/40 hover:text-primary transition-colors flex items-center gap-1">
+              <Lock className="w-3 h-3" /> Quản trị viên
             </Link>
           </div>
         </div>

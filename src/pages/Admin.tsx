@@ -15,11 +15,15 @@ import {
   Check,
   Sparkles,
   Upload,
-  RotateCcw
+  RotateCcw,
+  User,
+  Key,
+  ShieldCheck
 } from 'lucide-react';
 
 export const Admin: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(apiService.isAdminLoggedIn());
+  const [usernameInput, setUsernameInput] = useState('admin');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState<'poems' | 'stories' | 'scholars'>('poems');
@@ -98,12 +102,12 @@ export const Admin: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    const res = await apiService.loginAdmin(passwordInput);
+    const res = await apiService.loginAdmin(usernameInput, passwordInput);
     if (res.success) {
       setIsLoggedIn(true);
-      showNotify('Đăng nhập quản trị viên thành công!');
+      showNotify(`Xin chào Quản trị viên ${usernameInput}! Đăng nhập thành công!`);
     } else {
-      setLoginError(res.error || 'Mật khẩu không đúng!');
+      setLoginError(res.error || 'Tài khoản hoặc mật khẩu không đúng!');
     }
   };
 
@@ -250,45 +254,63 @@ export const Admin: React.FC = () => {
   // -------------------------------------------------------------
   if (!isLoggedIn) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center px-4 py-16">
-        <div className="bg-card border border-border p-8 rounded-lg max-w-md w-full shadow-xl">
+      <div className="min-h-[75vh] flex items-center justify-center px-4 py-16">
+        <div className="bg-card border border-border p-8 md:p-10 rounded-xl max-w-md w-full shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-primary" />
+          
           <div className="text-center mb-8">
-            <div className="w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-              <Lock className="w-6 h-6" />
+            <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
+              <Lock className="w-7 h-7" />
             </div>
-            <h1 className="font-serif text-3xl font-bold text-foreground mb-2">Quản Trị Thi Quán</h1>
-            <p className="text-xs text-foreground/60">Đăng nhập để đăng bài thơ, câu chuyện và quản lý nội dung.</p>
+            <h1 className="font-serif text-3xl font-bold text-foreground mb-2">Đăng Nhập Quản Trị</h1>
+            <p className="text-xs text-foreground/60 leading-relaxed">
+              Khu vực dành riêng cho Quản trị viên (Admin) để đăng bài thơ, câu chuyện và quản lý nội dung website.
+            </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-foreground/80">
-                Mật khẩu quản trị viên
+              <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-foreground/80 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-primary" /> Tài khoản Quản trị
+              </label>
+              <input
+                type="text"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                placeholder="Tên tài khoản (mặc định: admin)..."
+                required
+                className="w-full bg-background border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors font-sans"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-foreground/80 flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-primary" /> Mật khẩu Quản trị
               </label>
               <input
                 type="password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="Nhập mật khẩu..."
+                placeholder="Nhập mật khẩu quản trị..."
                 required
-                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
+                className="w-full bg-background border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors font-sans"
               />
               <p className="text-[11px] text-foreground/50 mt-1.5 italic">
-                * Mật khẩu mặc định: <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-primary">thicalandinh2026</code>
+                * Tài khoản mặc định: <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-primary">admin</code> / Mật khẩu: <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-primary">thicalandinh2026</code>
               </p>
             </div>
 
             {loginError && (
-              <p className="text-xs text-red-500 font-medium bg-red-50 p-2.5 rounded border border-red-200">
-                {loginError}
+              <p className="text-xs text-red-600 font-medium bg-red-50 p-3 rounded-lg border border-red-200 animate-in fade-in">
+                ⚠️ {loginError}
               </p>
             )}
 
             <button
               type="submit"
-              className="w-full bg-primary text-primary-foreground font-medium py-3 rounded hover:bg-primary/90 transition-colors uppercase tracking-widest text-sm"
+              className="w-full bg-primary text-primary-foreground font-medium py-3 rounded-lg hover:bg-primary/90 transition-all uppercase tracking-widest text-sm shadow-md hover:shadow-lg flex items-center justify-center gap-2"
             >
-              Đăng Nhập Quản Trị
+              <ShieldCheck className="w-4 h-4" /> Đăng Nhập Hệ Thống
             </button>
           </form>
         </div>
@@ -308,8 +330,13 @@ export const Admin: React.FC = () => {
             <Sparkles className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-serif text-2xl font-bold text-foreground">Bảng Điều Khiển Quản Trị</h1>
-            <p className="text-xs text-foreground/60">Hệ thống quản lý cơ sở dữ liệu Thi Ca Lan Đình (Vercel & Local)</p>
+            <div className="flex items-center gap-2">
+              <h1 className="font-serif text-2xl font-bold text-foreground">Bảng Điều Khiển Quản Trị</h1>
+              <span className="text-[11px] font-semibold bg-primary/15 text-primary px-2.5 py-0.5 rounded-full border border-primary/20">
+                👤 {apiService.getAdminUsername()}
+              </span>
+            </div>
+            <p className="text-xs text-foreground/60">Hệ thống quản lý nội dung độc quyền của Quản trị viên</p>
           </div>
         </div>
 

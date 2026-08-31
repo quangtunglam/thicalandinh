@@ -8,19 +8,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'POST') {
-    const { password } = req.body || {};
+    const { username, password } = req.body || {};
     const adminPassword = process.env.ADMIN_PASSWORD || 'thicalandinh2026';
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
 
-    if (password === adminPassword) {
+    const isValidUser = !username || username.trim().toLowerCase() === adminUser.toLowerCase();
+    const isValidPass = password === adminPassword;
+
+    if (isValidUser && isValidPass) {
       return res.status(200).json({
         success: true,
         token: adminPassword,
+        username: adminUser,
         message: 'Đăng nhập quản trị viên thành công!'
       });
     } else {
       return res.status(401).json({
         success: false,
-        error: 'Mật khẩu quản trị không chính xác!'
+        error: !isValidUser ? 'Tên tài khoản không tồn tại!' : 'Mật khẩu quản trị không chính xác!'
       });
     }
   }
