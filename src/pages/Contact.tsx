@@ -17,7 +17,7 @@ export const Contact: React.FC = () => {
         <div className="bg-card p-6 rounded border border-border text-center">
           <Mail className="w-6 h-6 text-primary mx-auto mb-2" />
           <h4 className="font-serif font-bold mb-1">Email</h4>
-          <p className="text-xs text-foreground/70">lienhe@thicalandinh.vn</p>
+          <p className="text-xs text-foreground/70">info@thicalandinh.com</p>
         </div>
         <div className="bg-card p-6 rounded border border-border text-center">
           <Phone className="w-6 h-6 text-primary mx-auto mb-2" />

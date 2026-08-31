@@ -97,7 +97,7 @@ export const Footer: React.FC = () => {
             </div>
             <div className="mt-8 text-xs text-foreground/60 leading-relaxed">
               <p>📍 Địa chỉ thi quán: Lan Đình Các, Thăng Long Kính Ký</p>
-              <p className="mt-1">✉️ Email: lienhe@thicalandinh.vn</p>
+              <p className="mt-1">✉️ Email: info@thicalandinh.com</p>
             </div>
           </div>
 
