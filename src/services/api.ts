@@ -173,12 +173,14 @@ export const apiService = {
 
   // --- STORIES CRUD ---
   async getStories(): Promise<Story[]> {
+    let resultList: Story[] | null = null;
+
     try {
       const res = await fetch(`${API_BASE}/stories`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          return data.map((s: any) => ({
+          resultList = data.map((s: any) => ({
             id: s.id,
             slug: s.slug || s.id,
             title: s.title,
@@ -195,13 +197,30 @@ export const apiService = {
       }
     } catch {}
 
-    const local = localStorage.getItem(STORAGE_KEYS.STORIES);
-    if (local) {
-      try {
-        return JSON.parse(local);
-      } catch {}
+    if (!resultList) {
+      const local = localStorage.getItem(STORAGE_KEYS.STORIES);
+      if (local) {
+        try {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            resultList = parsed;
+          }
+        } catch {}
+      }
     }
-    return STORIES;
+
+    if (!resultList) {
+      return STORIES;
+    }
+
+    // Merge: ensure all built-in STORIES are present in resultList
+    const merged = [...resultList];
+    for (const s of STORIES) {
+      if (!merged.some(m => m.id === s.id || m.slug === s.slug)) {
+        merged.push(s);
+      }
+    }
+    return merged;
   },
 
   async saveStory(story: Story): Promise<boolean> {

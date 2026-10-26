@@ -7,7 +7,7 @@ import { ArrowLeft, Sparkles, Headphones, Volume2 } from 'lucide-react';
 
 export const StoryDetail: React.FC = () => {
   const params = useParams();
-  const slug = params.slug || 'quan-trong-bao-thuc-nha';
+  const rawSlug = params.slug || 'quan-trong-bao-thuc-nha';
   const [story, setStory] = useState<Story | null>(null);
   const [activeAudioLang, setActiveAudioLang] = useState<'vi' | 'cs'>('vi');
   const [audioViUrl, setAudioViUrl] = useState<string | null>(null);
@@ -15,7 +15,36 @@ export const StoryDetail: React.FC = () => {
 
   useEffect(() => {
     apiService.getStories().then(async (list) => {
-      const found = list.find((s) => s.slug === slug) || list[0] || null;
+      let decoded = rawSlug;
+      try {
+        decoded = decodeURIComponent(rawSlug);
+      } catch {}
+
+      const normalize = (str: string) =>
+        str
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/đ/g, 'd')
+          .replace(/[^a-z0-9]/g, '');
+
+      const normTarget = normalize(decoded);
+
+      const found =
+        list.find((s) => {
+          if (!s) return false;
+          if (s.slug === rawSlug || s.slug === decoded || s.id === rawSlug || s.id === decoded) {
+            return true;
+          }
+          if (normalize(s.slug) === normTarget || normalize(s.id) === normTarget) {
+            return true;
+          }
+          if (normalize(s.title) === normTarget) {
+            return true;
+          }
+          return false;
+        }) || list[0] || null;
+
       setStory(found);
 
       if (found) {
@@ -41,7 +70,7 @@ export const StoryDetail: React.FC = () => {
         }
       }
     });
-  }, [slug]);
+  }, [rawSlug]);
 
   if (!story) return null;
 
@@ -137,7 +166,7 @@ export const StoryDetail: React.FC = () => {
                 <span className="text-[11px] text-foreground/50 italic">Định dạng âm thanh MP3</span>
               </div>
               <audio
-                key={`${slug}-${activeAudioLang}-${currentAudioUrl}`}
+                key={`${story.slug}-${activeAudioLang}-${currentAudioUrl}`}
                 controls
                 src={currentAudioUrl}
                 className="w-full h-11 rounded-lg focus:outline-none"

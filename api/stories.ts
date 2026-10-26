@@ -9,13 +9,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const db = getDbPool();
-
-  try {
-    if (db) await initDatabaseSchema();
-
-    if (req.method === 'GET') {
+  if (req.method === 'GET') {
+    try {
+      const db = getDbPool();
       if (db) {
+        await initDatabaseSchema();
         const result = await db.query('SELECT * FROM stories ORDER BY created_at DESC');
         if (result.rows.length === 0) {
           for (const s of INITIAL_STORIES) {
@@ -39,8 +37,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           audioCs: r.audio_cs || r.audioCs || ''
         })));
       }
-      return res.status(200).json(INITIAL_STORIES);
+    } catch (err) {
+      console.warn('DB error in GET /api/stories, falling back to INITIAL_STORIES:', err);
     }
+    return res.status(200).json(INITIAL_STORIES);
+  }
+
+  const db = getDbPool();
+
+  try {
+    if (db) await initDatabaseSchema();
 
     if (req.method === 'POST') {
       const authHeader = req.headers.authorization;

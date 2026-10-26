@@ -12,15 +12,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  const db = getDbPool();
-
-  try {
-    if (db) {
-      await initDatabaseSchema();
-    }
-
-    if (req.method === 'GET') {
+  if (req.method === 'GET') {
+    try {
+      const db = getDbPool();
       if (db) {
+        await initDatabaseSchema();
         const result = await db.query('SELECT * FROM poems ORDER BY created_at DESC');
         if (result.rows.length === 0) {
           // Auto-seed if empty
@@ -50,10 +46,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(200).json(seeded.rows);
         }
         return res.status(200).json(result.rows);
-      } else {
-        // In-memory fallback
-        return res.status(200).json(INITIAL_POEMS);
       }
+    } catch (err) {
+      console.warn('DB error in GET /api/poems, falling back to INITIAL_POEMS:', err);
+    }
+    return res.status(200).json(INITIAL_POEMS);
+  }
+
+  const db = getDbPool();
+
+  try {
+    if (db) {
+      await initDatabaseSchema();
     }
 
     if (req.method === 'POST') {
