@@ -20,16 +20,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (result.rows.length === 0) {
           for (const s of INITIAL_STORIES) {
             await db.query(
-              `INSERT INTO stories (id, slug, title, subtitle, theme, img, summary, content, moral)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+              `INSERT INTO stories (id, slug, title, subtitle, theme, img, summary, content, moral, audio_vi, audio_cs)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                ON CONFLICT (id) DO NOTHING`,
-              [s.id, s.slug, s.title, s.subtitle, s.theme, s.img, s.summary, JSON.stringify(s.content), s.moral]
+              [s.id, s.slug, s.title, s.subtitle, s.theme, s.img, s.summary, JSON.stringify(s.content), s.moral, '', '']
             );
           }
           const seeded = await db.query('SELECT * FROM stories ORDER BY created_at DESC');
-          return res.status(200).json(seeded.rows);
+          return res.status(200).json(seeded.rows.map((r: any) => ({
+            ...r,
+            audioVi: r.audio_vi || r.audioVi || '',
+            audioCs: r.audio_cs || r.audioCs || ''
+          })));
         }
-        return res.status(200).json(result.rows);
+        return res.status(200).json(result.rows.map((r: any) => ({
+          ...r,
+          audioVi: r.audio_vi || r.audioVi || '',
+          audioCs: r.audio_cs || r.audioCs || ''
+        })));
       }
       return res.status(200).json(INITIAL_STORIES);
     }
@@ -47,8 +55,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (db) {
         await db.query(
-          `INSERT INTO stories (id, slug, title, subtitle, theme, img, summary, content, moral)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          `INSERT INTO stories (id, slug, title, subtitle, theme, img, summary, content, moral, audio_vi, audio_cs)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
            ON CONFLICT (id) DO UPDATE SET
              title = EXCLUDED.title,
              subtitle = EXCLUDED.subtitle,
@@ -56,7 +64,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              img = EXCLUDED.img,
              summary = EXCLUDED.summary,
              content = EXCLUDED.content,
-             moral = EXCLUDED.moral`,
+             moral = EXCLUDED.moral,
+             audio_vi = EXCLUDED.audio_vi,
+             audio_cs = EXCLUDED.audio_cs`,
           [
             id,
             slug,
@@ -66,7 +76,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             body.img || '/assets/story_scholars-CtpupIEr.jpg',
             body.summary || '',
             JSON.stringify(body.content || []),
-            body.moral || ''
+            body.moral || '',
+            body.audioVi || body.audio_vi || '',
+            body.audioCs || body.audio_cs || ''
           ]
         );
       }

@@ -18,8 +18,11 @@ import {
   RotateCcw,
   User,
   Key,
-  ShieldCheck
+  ShieldCheck,
+  Headphones,
+  Volume2
 } from 'lucide-react';
+import { audioStorage } from '@/services/audioStorage';
 
 // Helper: Compress an uploaded file using an offscreen Canvas
 const compressImageFile = (file: File, maxWidth = 900, maxHeight = 900, quality = 0.82): Promise<string> => {
@@ -136,6 +139,8 @@ export const Admin: React.FC = () => {
     summary: '',
     content: [''],
     moral: '',
+    audioVi: '',
+    audioCs: '',
   });
 
   // Form Fields for Scholar
@@ -253,6 +258,8 @@ export const Admin: React.FC = () => {
         summary: storyForm.summary?.trim() || '',
         content: (storyForm.content || []).map(c => c.trim()).filter(c => c !== ''),
         moral: storyForm.moral?.trim() || '',
+        audioVi: storyForm.audioVi || '',
+        audioCs: storyForm.audioCs || '',
       };
 
       await apiService.saveStory(newStory);
@@ -353,6 +360,41 @@ export const Admin: React.FC = () => {
       } catch (err) {
         console.error('Lỗi khi xử lý ảnh:', err);
         showNotify('Không thể xử lý ảnh. Vui lòng thử lại!');
+      }
+    }
+  };
+
+  // --- AUDIO UPLOAD HELPER ---
+  const handleAudioFileChange = async (e: React.ChangeEvent<HTMLInputElement>, lang: 'vi' | 'cs') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.includes('audio') && !file.name.match(/\.(mp3|wav|ogg|m4a|aac)$/i)) {
+        showNotify('Vui lòng chọn file âm thanh định dạng MP3, M4A hoặc WAV!');
+        return;
+      }
+      try {
+        const key = `idb:audio_${lang}_${Date.now()}`;
+        // Store in IndexedDB for fast local playback
+        await audioStorage.saveAudio(key, file);
+
+        // If file is small (< 3.5MB), also read as base64 data URL so it can be saved in backend
+        if (file.size < 3.5 * 1024 * 1024) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = reader.result as string;
+            if (lang === 'vi') setStoryForm(prev => ({ ...prev, audioVi: base64 }));
+            if (lang === 'cs') setStoryForm(prev => ({ ...prev, audioCs: base64 }));
+            showNotify(`Đã tải bản đọc ${lang === 'vi' ? 'Tiếng Việt' : 'Tiếng Séc'} thành công!`);
+          };
+          reader.readAsDataURL(file);
+        } else {
+          if (lang === 'vi') setStoryForm(prev => ({ ...prev, audioVi: key }));
+          if (lang === 'cs') setStoryForm(prev => ({ ...prev, audioCs: key }));
+          showNotify(`Đã lưu file âm thanh (${(file.size / 1024 / 1024).toFixed(1)}MB) thành công!`);
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải file âm thanh:', err);
+        showNotify('Không thể tải file âm thanh. Vui lòng thử lại!');
       }
     }
   };
@@ -612,6 +654,8 @@ export const Admin: React.FC = () => {
                   summary: '',
                   content: [''],
                   moral: '',
+                  audioVi: '',
+                  audioCs: '',
                 });
                 setStoryModalOpen(true);
               }}
@@ -631,6 +675,20 @@ export const Admin: React.FC = () => {
                       <h4 className="font-serif font-bold text-lg text-foreground">{st.title}</h4>
                       <p className="text-xs text-primary font-medium">{st.theme} • "{st.subtitle}"</p>
                       <p className="text-xs text-foreground/60 line-clamp-1 mt-0.5">{st.summary}</p>
+                      {(st.audioVi || st.audioCs) && (
+                        <div className="flex items-center gap-2 mt-1.5">
+                          {st.audioVi && (
+                            <span className="text-[10px] bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+                              <Volume2 className="w-3 h-3" /> 🇻🇳 MP3 Việt
+                            </span>
+                          )}
+                          {st.audioCs && (
+                            <span className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+                              <Volume2 className="w-3 h-3" /> 🇨🇿 MP3 Séc
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -946,6 +1004,102 @@ export const Admin: React.FC = () => {
                       onChange={(e) => handleImageFileChange(e, 'story')}
                     />
                   </label>
+                </div>
+              </div>
+
+              {/* Audio MP3 Attachments: Vietnamese and Czech */}
+              <div className="p-4 bg-muted/40 border border-primary/20 rounded-lg space-y-4">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-1">
+                    <Headphones className="w-4 h-4" /> Đính Kèm Bản Đọc Âm Thanh (Audio MP3)
+                  </div>
+                  <p className="text-[11px] text-foreground/60 leading-relaxed">
+                    Đính kèm file âm thanh MP3 diễn đọc câu chuyện bằng <strong>Tiếng Việt</strong> và <strong>Tiếng Séc (Čeština)</strong>. Có thể dán link URL trực tiếp (từ Google Drive, Dropbox, Cloudinary, lưu trữ web) hoặc tải file MP3 từ máy tính.
+                  </p>
+                </div>
+
+                {/* Vietnamese Audio */}
+                <div className="space-y-1.5 p-3 bg-background/80 rounded border border-border">
+                  <div className="flex items-center justify-between text-xs font-bold uppercase">
+                    <span className="flex items-center gap-1.5 text-foreground">
+                      <span>🇻🇳</span> Bản đọc Tiếng Việt (MP3)
+                    </span>
+                    {storyForm.audioVi && (
+                      <button
+                        type="button"
+                        onClick={() => setStoryForm({ ...storyForm, audioVi: '' })}
+                        className="text-[11px] text-red-600 hover:underline lowercase font-normal"
+                      >
+                        ✕ gỡ bỏ file
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={storyForm.audioVi || ''}
+                      onChange={(e) => setStoryForm({ ...storyForm, audioVi: e.target.value })}
+                      placeholder="Dán link URL file MP3 Tiếng Việt (https://... hoặc /audio/...) hoặc bấm Tải file..."
+                      className="flex-1 bg-background border border-border rounded px-3 py-2 text-xs focus:outline-none focus:border-primary"
+                    />
+                    <label className="cursor-pointer bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-3 py-2 rounded text-xs font-medium flex items-center gap-1.5 shrink-0 transition-colors">
+                      <Upload className="w-3.5 h-3.5" /> Tải file MP3
+                      <input
+                        type="file"
+                        accept="audio/*,.mp3,.m4a,.wav,.ogg"
+                        className="hidden"
+                        onChange={(e) => handleAudioFileChange(e, 'vi')}
+                      />
+                    </label>
+                  </div>
+                  {storyForm.audioVi && (
+                    <div className="pt-2 flex items-center gap-2">
+                      <span className="text-[11px] text-foreground/60 shrink-0">Nghe thử:</span>
+                      <audio controls src={storyForm.audioVi} className="w-full h-8" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Czech Audio */}
+                <div className="space-y-1.5 p-3 bg-background/80 rounded border border-border">
+                  <div className="flex items-center justify-between text-xs font-bold uppercase">
+                    <span className="flex items-center gap-1.5 text-foreground">
+                      <span>🇨🇿</span> Bản đọc Tiếng Séc / Čeština (MP3)
+                    </span>
+                    {storyForm.audioCs && (
+                      <button
+                        type="button"
+                        onClick={() => setStoryForm({ ...storyForm, audioCs: '' })}
+                        className="text-[11px] text-red-600 hover:underline lowercase font-normal"
+                      >
+                        ✕ gỡ bỏ file
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={storyForm.audioCs || ''}
+                      onChange={(e) => setStoryForm({ ...storyForm, audioCs: e.target.value })}
+                      placeholder="Dán link URL file MP3 Tiếng Séc hoặc bấm Tải file..."
+                      className="flex-1 bg-background border border-border rounded px-3 py-2 text-xs focus:outline-none focus:border-primary"
+                    />
+                    <label className="cursor-pointer bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-3 py-2 rounded text-xs font-medium flex items-center gap-1.5 shrink-0 transition-colors">
+                      <Upload className="w-3.5 h-3.5" /> Tải file MP3
+                      <input
+                        type="file"
+                        accept="audio/*,.mp3,.m4a,.wav,.ogg"
+                        className="hidden"
+                        onChange={(e) => handleAudioFileChange(e, 'cs')}
+                      />
+                    </label>
+                  </div>
+                  {storyForm.audioCs && (
+                    <div className="pt-2 flex items-center gap-2">
+                      <span className="text-[11px] text-foreground/60 shrink-0">Nghe thử:</span>
+                      <audio controls src={storyForm.audioCs} className="w-full h-8" />
+                    </div>
+                  )}
                 </div>
               </div>
 

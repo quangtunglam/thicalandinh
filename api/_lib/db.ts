@@ -49,6 +49,8 @@ export async function initDatabaseSchema() {
       summary TEXT,
       content JSONB NOT NULL,
       moral TEXT,
+      audio_vi TEXT,
+      audio_cs TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -78,4 +80,9 @@ export async function initDatabaseSchema() {
   `;
 
   await db.query(createTablesSql);
+  // Ensure columns exist if table was already created
+  try {
+    await db.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS audio_vi TEXT;`);
+    await db.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS audio_cs TEXT;`);
+  } catch {}
 }

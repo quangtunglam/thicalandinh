@@ -188,6 +188,8 @@ export const apiService = {
             summary: s.summary || '',
             content: Array.isArray(s.content) ? s.content : (typeof s.content === 'string' ? JSON.parse(s.content) : []),
             moral: s.moral || '',
+            audioVi: s.audioVi || s.audio_vi || '',
+            audioCs: s.audioCs || s.audio_cs || '',
           }));
         }
       }

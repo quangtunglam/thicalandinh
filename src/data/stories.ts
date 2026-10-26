@@ -8,6 +8,8 @@ export interface Story {
   summary: string;
   content: string[];
   moral: string;
+  audioVi?: string; // Link URL hoặc Base64 file MP3 bản đọc Tiếng Việt
+  audioCs?: string; // Link URL hoặc Base64 file MP3 bản đọc Tiếng Séc (Čeština)
 }
 
 export const STORIES: Story[] = [
