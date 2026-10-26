@@ -21,12 +21,85 @@ import {
   ShieldCheck
 } from 'lucide-react';
 
+// Helper: Compress an uploaded file using an offscreen Canvas
+const compressImageFile = (file: File, maxWidth = 900, maxHeight = 900, quality = 0.82): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const src = e.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxHeight) {
+          if (width / height > maxWidth / maxHeight) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(src);
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(src);
+      img.src = src;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+};
+
+// Helper: Downscale an existing large base64 image if needed
+const compressBase64IfNeeded = async (base64Str: string): Promise<string> => {
+  if (!base64Str || !base64Str.startsWith('data:image') || base64Str.length < 90000) {
+    return base64Str;
+  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+      const maxWidth = 900;
+      const maxHeight = 900;
+      if (width > maxWidth || height > maxHeight) {
+        if (width / height > maxWidth / maxHeight) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(base64Str);
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => resolve(base64Str);
+    img.src = base64Str;
+  });
+};
+
 export const Admin: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(apiService.isAdminLoggedIn());
   const [usernameInput, setUsernameInput] = useState('admin');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState<'poems' | 'stories' | 'scholars'>('poems');
+
+  // Operation states
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   // Data states
   const [poems, setPoems] = useState<Poem[]>([]);
@@ -119,84 +192,117 @@ export const Admin: React.FC = () => {
   // --- SAVE POEM ---
   const handleSavePoem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!poemForm.title || !poemForm.author) {
-      alert('Vui lòng nhập đầy đủ Tựa bài thơ và Tác giả!');
+    setFormError('');
+    if (!poemForm.title?.trim() || !poemForm.author?.trim()) {
+      setFormError('Vui lòng nhập đầy đủ Tựa bài thơ và Tác giả!');
       return;
     }
 
-    const newPoem: Poem = {
-      id: poemForm.id || 'poem-' + Date.now(),
-      slug: poemForm.slug || poemForm.title.toLowerCase().replace(/\s+/g, '-'),
-      title: poemForm.title,
-      author: poemForm.author,
-      category: poemForm.category as any || 'Đường luật',
-      period: poemForm.period || 'Cổ cận đại',
-      img: poemForm.img || '/assets/article_1-Bnc_y2PA.jpg',
-      featuredQuote: poemForm.featuredQuote || poemForm.verses?.[0] || '',
-      verses: (poemForm.verses || []).filter(v => v.trim() !== ''),
-      originalText: (poemForm.originalText || []).filter(v => v.trim() !== ''),
-      translation: (poemForm.translation || []).filter(v => v.trim() !== ''),
-      explanation: poemForm.explanation || '',
-      tags: poemForm.tags || ['Thi Ca'],
-    };
+    try {
+      setIsSaving(true);
+      const finalImg = poemForm.img ? await compressBase64IfNeeded(poemForm.img) : '/assets/article_1-Bnc_y2PA.jpg';
 
-    await apiService.savePoem(newPoem);
-    await loadData();
-    setPoemModalOpen(false);
-    showNotify(`Đã lưu bài thơ "${newPoem.title}" thành công!`);
+      const newPoem: Poem = {
+        id: poemForm.id || 'poem-' + Date.now(),
+        slug: poemForm.slug || poemForm.title.toLowerCase().replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s-]/g, '').trim().replace(/\s+/g, '-'),
+        title: poemForm.title.trim(),
+        author: poemForm.author.trim(),
+        category: (poemForm.category as any) || 'Đường luật',
+        period: poemForm.period?.trim() || 'Cổ cận đại',
+        img: finalImg,
+        featuredQuote: poemForm.featuredQuote?.trim() || poemForm.verses?.[0]?.trim() || '',
+        verses: (poemForm.verses || []).filter(v => v.trim() !== ''),
+        originalText: (poemForm.originalText || []).filter(v => v.trim() !== ''),
+        translation: (poemForm.translation || []).filter(v => v.trim() !== ''),
+        explanation: poemForm.explanation?.trim() || '',
+        tags: poemForm.tags || ['Thi Ca'],
+      };
+
+      await apiService.savePoem(newPoem);
+      await loadData();
+      setPoemModalOpen(false);
+      showNotify(`Đã lưu bài thơ "${newPoem.title}" thành công!`);
+    } catch (err: any) {
+      console.error('Lỗi khi lưu bài thơ:', err);
+      setFormError('Có lỗi xảy ra khi lưu: ' + (err?.message || 'Vui lòng thử lại'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // --- SAVE STORY ---
   const handleSaveStory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!storyForm.title) {
-      alert('Vui lòng nhập tựa đề câu chuyện!');
+    setFormError('');
+    if (!storyForm.title?.trim()) {
+      setFormError('Vui lòng nhập Tựa đề câu chuyện ở đầu biểu mẫu!');
       return;
     }
 
-    const newStory: Story = {
-      id: storyForm.id || 'story-' + Date.now(),
-      slug: storyForm.slug || storyForm.title.toLowerCase().replace(/\s+/g, '-'),
-      title: storyForm.title,
-      subtitle: storyForm.subtitle || '',
-      theme: storyForm.theme || 'Điển cố',
-      img: storyForm.img || '/assets/story_scholars-CtpupIEr.jpg',
-      summary: storyForm.summary || '',
-      content: (storyForm.content || []).filter(c => c.trim() !== ''),
-      moral: storyForm.moral || '',
-    };
+    try {
+      setIsSaving(true);
+      const finalImg = storyForm.img ? await compressBase64IfNeeded(storyForm.img) : '/assets/story_scholars-CtpupIEr.jpg';
 
-    await apiService.saveStory(newStory);
-    await loadData();
-    setStoryModalOpen(false);
-    showNotify(`Đã lưu câu chuyện "${newStory.title}" thành công!`);
+      const newStory: Story = {
+        id: storyForm.id || 'story-' + Date.now(),
+        slug: storyForm.slug || storyForm.title.toLowerCase().replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s-]/g, '').trim().replace(/\s+/g, '-'),
+        title: storyForm.title.trim(),
+        subtitle: storyForm.subtitle?.trim() || '',
+        theme: storyForm.theme?.trim() || 'Điển cố',
+        img: finalImg,
+        summary: storyForm.summary?.trim() || '',
+        content: (storyForm.content || []).filter(c => c.trim() !== ''),
+        moral: storyForm.moral?.trim() || '',
+      };
+
+      await apiService.saveStory(newStory);
+      await loadData();
+      setStoryModalOpen(false);
+      showNotify(`Đã lưu câu chuyện "${newStory.title}" thành công!`);
+    } catch (err: any) {
+      console.error('Lỗi khi lưu câu chuyện:', err);
+      setFormError('Có lỗi xảy ra khi lưu: ' + (err?.message || 'Vui lòng kiểm tra lại'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // --- SAVE SCHOLAR ---
   const handleSaveScholar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!scholarForm.name) {
-      alert('Vui lòng nhập tên danh nhân!');
+    setFormError('');
+    if (!scholarForm.name?.trim()) {
+      setFormError('Vui lòng nhập Họ và tên danh nhân!');
       return;
     }
 
-    const newScholar: Scholar = {
-      id: scholarForm.id !== undefined ? scholarForm.id : Date.now(),
-      slug: scholarForm.slug || scholarForm.name.toLowerCase().replace(/\s+/g, '-'),
-      name: scholarForm.name,
-      title: scholarForm.title || '',
-      era: scholarForm.era || '',
-      img: scholarForm.img || '/assets/avatar_1-DuNlxL1Y.jpg',
-      bio: scholarForm.bio || '',
-      legacy: scholarForm.legacy || '',
-      famousQuote: scholarForm.famousQuote || '',
-      works: (scholarForm.works || []).filter(w => w.trim() !== ''),
-    };
+    try {
+      setIsSaving(true);
+      const finalImg = scholarForm.img ? await compressBase64IfNeeded(scholarForm.img) : '/assets/avatar_1-DuNlxL1Y.jpg';
 
-    await apiService.saveScholar(newScholar);
-    await loadData();
-    setScholarModalOpen(false);
-    showNotify(`Đã lưu hồ sơ danh nhân "${newScholar.name}" thành công!`);
+      const newScholar: Scholar = {
+        id: scholarForm.id !== undefined ? scholarForm.id : Date.now(),
+        slug: scholarForm.slug || scholarForm.name.toLowerCase().replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s-]/g, '').trim().replace(/\s+/g, '-'),
+        name: scholarForm.name.trim(),
+        title: scholarForm.title?.trim() || '',
+        era: scholarForm.era?.trim() || '',
+        img: finalImg,
+        bio: scholarForm.bio?.trim() || '',
+        legacy: scholarForm.legacy?.trim() || '',
+        famousQuote: scholarForm.famousQuote?.trim() || '',
+        works: (scholarForm.works || []).filter(w => w.trim() !== ''),
+      };
+
+      await apiService.saveScholar(newScholar);
+      await loadData();
+      setScholarModalOpen(false);
+      showNotify(`Đã lưu hồ sơ danh nhân "${newScholar.name}" thành công!`);
+    } catch (err: any) {
+      console.error('Lỗi khi lưu danh nhân:', err);
+      setFormError('Có lỗi xảy ra khi lưu: ' + (err?.message || 'Vui lòng kiểm tra lại'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // --- DELETE HANDLERS ---
@@ -234,18 +340,20 @@ export const Admin: React.FC = () => {
   };
 
   // --- IMAGE UPLOAD HELPER ---
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>, target: 'poem' | 'story' | 'scholar') => {
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>, target: 'poem' | 'story' | 'scholar') => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
+      try {
+        // Compress and downscale uploaded image file using Canvas to optimize storage
+        const base64 = await compressImageFile(file, 900, 900, 0.82);
         if (target === 'poem') setPoemForm(prev => ({ ...prev, img: base64 }));
         if (target === 'story') setStoryForm(prev => ({ ...prev, img: base64 }));
         if (target === 'scholar') setScholarForm(prev => ({ ...prev, img: base64 }));
-        showNotify('Đã tải ảnh lên thành công!');
-      };
-      reader.readAsDataURL(file);
+        showNotify('Đã tải và tối ưu hóa ảnh thành công!');
+      } catch (err) {
+        console.error('Lỗi khi xử lý ảnh:', err);
+        showNotify('Không thể xử lý ảnh. Vui lòng thử lại!');
+      }
     }
   };
 
@@ -426,6 +534,7 @@ export const Admin: React.FC = () => {
             <h2 className="font-serif text-xl font-bold">Danh Sách Bài Thơ</h2>
             <button
               onClick={() => {
+                setFormError('');
                 setPoemForm({
                   title: '',
                   author: '',
@@ -463,6 +572,7 @@ export const Admin: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
+                        setFormError('');
                         setPoemForm(p);
                         setPoemModalOpen(true);
                       }}
@@ -493,6 +603,7 @@ export const Admin: React.FC = () => {
             <h2 className="font-serif text-xl font-bold">Danh Sách Cổ Tích & Điển Cố</h2>
             <button
               onClick={() => {
+                setFormError('');
                 setStoryForm({
                   title: '',
                   subtitle: '',
@@ -526,6 +637,7 @@ export const Admin: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
+                        setFormError('');
                         setStoryForm(st);
                         setStoryModalOpen(true);
                       }}
@@ -556,6 +668,7 @@ export const Admin: React.FC = () => {
             <h2 className="font-serif text-xl font-bold">Danh Sách Danh Nhân</h2>
             <button
               onClick={() => {
+                setFormError('');
                 setScholarForm({
                   name: '',
                   title: '',
@@ -584,6 +697,7 @@ export const Admin: React.FC = () => {
                 <div className="flex justify-center gap-2 pt-2 border-t border-border">
                   <button
                     onClick={() => {
+                      setFormError('');
                       setScholarForm(sc);
                       setScholarModalOpen(true);
                     }}
@@ -734,19 +848,29 @@ export const Admin: React.FC = () => {
                 />
               </div>
 
+              {formError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold rounded flex items-center gap-2">
+                  <span>⚠️</span> <span>{formError}</span>
+                </div>
+              )}
+
               <div className="pt-4 border-t border-border flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setPoemModalOpen(false)}
+                  onClick={() => {
+                    setPoemModalOpen(false);
+                    setFormError('');
+                  }}
                   className="px-4 py-2 text-xs uppercase tracking-wider bg-muted rounded hover:bg-muted/80"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 text-xs uppercase tracking-wider bg-primary text-primary-foreground font-semibold rounded hover:bg-primary/90"
+                  disabled={isSaving}
+                  className="px-6 py-2 text-xs uppercase tracking-wider bg-primary text-primary-foreground font-semibold rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Lưu Bài Thơ
+                  {isSaving ? 'Đang lưu...' : 'Lưu Bài Thơ'}
                 </button>
               </div>
             </form>
@@ -858,19 +982,29 @@ export const Admin: React.FC = () => {
                 />
               </div>
 
+              {formError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold rounded flex items-center gap-2">
+                  <span>⚠️</span> <span>{formError}</span>
+                </div>
+              )}
+
               <div className="pt-4 border-t border-border flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setStoryModalOpen(false)}
+                  onClick={() => {
+                    setStoryModalOpen(false);
+                    setFormError('');
+                  }}
                   className="px-4 py-2 text-xs uppercase tracking-wider bg-muted rounded hover:bg-muted/80"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 text-xs uppercase tracking-wider bg-primary text-primary-foreground font-semibold rounded hover:bg-primary/90"
+                  disabled={isSaving}
+                  className="px-6 py-2 text-xs uppercase tracking-wider bg-primary text-primary-foreground font-semibold rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Lưu Bài Viết
+                  {isSaving ? 'Đang lưu...' : 'Lưu Bài Viết'}
                 </button>
               </div>
             </form>
@@ -971,19 +1105,29 @@ export const Admin: React.FC = () => {
                 />
               </div>
 
+              {formError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold rounded flex items-center gap-2">
+                  <span>⚠️</span> <span>{formError}</span>
+                </div>
+              )}
+
               <div className="pt-4 border-t border-border flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setScholarModalOpen(false)}
+                  onClick={() => {
+                    setScholarModalOpen(false);
+                    setFormError('');
+                  }}
                   className="px-4 py-2 text-xs uppercase tracking-wider bg-muted rounded hover:bg-muted/80"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 text-xs uppercase tracking-wider bg-primary text-primary-foreground font-semibold rounded hover:bg-primary/90"
+                  disabled={isSaving}
+                  className="px-6 py-2 text-xs uppercase tracking-wider bg-primary text-primary-foreground font-semibold rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Lưu Danh Nhân
+                  {isSaving ? 'Đang lưu...' : 'Lưu Danh Nhân'}
                 </button>
               </div>
             </form>

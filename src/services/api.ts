@@ -13,6 +13,28 @@ const STORAGE_KEYS = {
 // API Base URL - relative /api in production on Vercel
 const API_BASE = '/api';
 
+function safeSetStorage(key: string, data: any) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (err) {
+    console.warn(`LocalStorage quota exceeded for ${key}. Compacting data...`, err);
+    try {
+      if (Array.isArray(data)) {
+        // Strip heavy base64 strings from older items if quota exceeded
+        const compacted = data.map((item, idx) => {
+          if (idx > 2 && item.img && item.img.startsWith('data:image')) {
+            return { ...item, img: '/assets/story_scholars-CtpupIEr.jpg' };
+          }
+          return item;
+        });
+        localStorage.setItem(key, JSON.stringify(compacted));
+      }
+    } catch (e2) {
+      console.error('Failed to save to localStorage even after compaction:', e2);
+    }
+  }
+}
+
 export const apiService = {
   // --- AUTHENTICATION ---
   async loginAdmin(username: string, password: string): Promise<{ success: boolean; token?: string; error?: string }> {
@@ -105,7 +127,7 @@ export const apiService = {
 
     const token = this.getAuthToken();
     try {
-      const res = await fetch(`${API_BASE}/poems`, {
+      await fetch(`${API_BASE}/poems`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,18 +135,9 @@ export const apiService = {
         },
         body: JSON.stringify(poem),
       });
-      if (res.ok) {
-        const current = await this.getPoems();
-        const existingIdx = current.findIndex(p => p.id === poem.id);
-        if (existingIdx >= 0) {
-          current[existingIdx] = poem;
-        } else {
-          current.unshift(poem);
-        }
-        localStorage.setItem(STORAGE_KEYS.POEMS, JSON.stringify(current));
-        return true;
-      }
-    } catch {}
+    } catch (err) {
+      console.warn('Network error saving to /api/poems, saving to local cache:', err);
+    }
 
     const current = await this.getPoems();
     const existingIdx = current.findIndex(p => p.id === poem.id);
@@ -133,7 +146,7 @@ export const apiService = {
     } else {
       current.unshift(poem);
     }
-    localStorage.setItem(STORAGE_KEYS.POEMS, JSON.stringify(current));
+    safeSetStorage(STORAGE_KEYS.POEMS, current);
     return true;
   },
 
@@ -204,7 +217,9 @@ export const apiService = {
         },
         body: JSON.stringify(story),
       });
-    } catch {}
+    } catch (err) {
+      console.warn('Network request to /api/stories failed, saving to local cache:', err);
+    }
 
     const current = await this.getStories();
     const existingIdx = current.findIndex(s => s.id === story.id);
@@ -213,7 +228,7 @@ export const apiService = {
     } else {
       current.unshift(story);
     }
-    localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(current));
+    safeSetStorage(STORAGE_KEYS.STORIES, current);
     return true;
   },
 
@@ -234,7 +249,7 @@ export const apiService = {
 
     const current = await this.getStories();
     const filtered = current.filter(s => s.id !== id);
-    localStorage.setItem(STORAGE_KEYS.STORIES, JSON.stringify(filtered));
+    safeSetStorage(STORAGE_KEYS.STORIES, filtered);
     return true;
   },
 
@@ -261,7 +276,7 @@ export const apiService = {
     } else {
       current.push(scholar);
     }
-    localStorage.setItem(STORAGE_KEYS.SCHOLARS, JSON.stringify(current));
+    safeSetStorage(STORAGE_KEYS.SCHOLARS, current);
     return true;
   },
 
@@ -272,7 +287,7 @@ export const apiService = {
 
     const current = await this.getScholars();
     const filtered = current.filter(s => s.slug !== slug);
-    localStorage.setItem(STORAGE_KEYS.SCHOLARS, JSON.stringify(filtered));
+    safeSetStorage(STORAGE_KEYS.SCHOLARS, filtered);
     return true;
   },
 
