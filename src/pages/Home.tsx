@@ -34,31 +34,29 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
   return (
     <div className="w-full">
       {/* 1. Hero Section */}
-      <section className="relative w-full flex items-center overflow-hidden">
+      <section className="relative w-full min-h-[460px] sm:min-h-[500px] md:min-h-[560px] lg:min-h-[640px] flex items-center overflow-hidden py-16 sm:py-20 md:py-28">
+        {/* Background Image with optimized focal point */}
         <div className="absolute inset-0 z-0">
           <img
             src="/assets/ChatGPT_Image_12_47_39_17_thg_8__2026_1786963672074-HdoORWX4.png"
-            alt="Landscape"
-            className="w-full h-full object-cover object-right"
+            alt="Thi Ca Lan Đình"
+            className="w-full h-full object-cover object-[75%_center] sm:object-right"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-background/40 to-transparent" />
+          {/* Mobile Overlay: High contrast warm tint ensuring text legibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/70 to-background/40 sm:hidden" />
+          {/* Desktop Overlay: Seamless left-to-right fade */}
+          <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-background/95 via-background/60 to-transparent" />
         </div>
 
-        <img
-          src="/assets/ChatGPT_Image_12_47_39_17_thg_8__2026_1786963672074-HdoORWX4.png"
-          alt=""
-          className="w-full invisible"
-          aria-hidden="true"
-        />
-
-        <div className="absolute inset-0 z-10 flex items-center px-8 md:px-32 lg:px-64">
+        {/* Content Container (natural document flow, no clipping) */}
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-5 sm:px-8 md:px-16 lg:px-24">
           <div className="max-w-2xl">
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-[4.5rem] italic font-bold text-foreground mb-5 leading-tight whitespace-nowrap">
+            <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-[4.5rem] italic font-bold text-foreground mb-4 sm:mb-5 leading-tight">
               Ôn cố nhi tri tân
             </h1>
 
-            <div className="flex items-center gap-2 mb-6">
-              <div className="h-px w-8 bg-primary/60" />
+            <div className="flex items-center gap-2 mb-4 sm:mb-6">
+              <div className="h-px w-8 sm:w-10 bg-primary/60" />
               <svg
                 width="16"
                 height="10"
@@ -70,17 +68,17 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
                 <circle cx="2" cy="5" r="1.2" fill="currentColor" />
                 <circle cx="14" cy="5" r="1.2" fill="currentColor" />
               </svg>
-              <div className="h-px w-8 bg-primary/60" />
+              <div className="h-px w-8 sm:w-10 bg-primary/60" />
             </div>
 
-            <p className="font-serif text-base md:text-lg text-foreground/80 mb-8 leading-relaxed">
-              Tìm về những giá trị đẹp của quá khứ<br />
+            <p className="font-serif text-sm sm:text-base md:text-lg text-foreground/85 mb-6 sm:mb-8 leading-relaxed max-w-lg">
+              Tìm về những giá trị đẹp của quá khứ<br className="hidden sm:inline" />{" "}
               để soi sáng hiện tại và hướng tới tương lai.
             </p>
 
             <Link
               href="/thi-ca"
-              className="group inline-flex items-center gap-3 bg-primary text-primary-foreground px-7 py-3 rounded-sm font-medium tracking-widest text-sm uppercase hover:bg-primary/90 transition-all shadow-md hover:shadow-lg"
+              className="group inline-flex items-center gap-3 bg-primary text-primary-foreground px-6 sm:px-7 py-3 rounded-sm font-medium tracking-widest text-xs sm:text-sm uppercase hover:bg-primary/90 transition-all shadow-md hover:shadow-lg active:scale-95"
             >
               KHÁM PHÁ NGAY
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -93,11 +91,13 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
       <section className="bg-card border-y border-border py-8 relative z-20 mx-4 md:mx-auto max-w-6xl rounded-lg shadow-sm">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-border/40">
-            {CATEGORIES.map((cat) => (
+            {CATEGORIES.map((cat, idx) => (
               <Link
                 key={cat.id}
                 href={cat.href}
-                className="flex items-center gap-4 px-5 py-5 group hover:bg-primary/5 transition-colors"
+                className={`flex items-center gap-4 px-4 sm:px-5 py-5 group hover:bg-primary/5 transition-colors ${
+                  idx === 4 ? 'col-span-2 md:col-span-1 justify-center sm:justify-start' : ''
+                }`}
               >
                 <img
                   src={cat.img}
