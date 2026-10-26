@@ -90,28 +90,5 @@ export const INITIAL_STORIES = [
       "Nhớ lại ân tình của bạn, Quản Trọng từng than rằng: 'Sinh ra ta là cha mẹ, nhưng hiểu ta chỉ có Bào Thúc Nha mà thôi!'"
     ],
     moral: "Tình tri kỷ chân chính không xây đắp trên sự tính toán hơn thua, mà trên sự thấu hiểu tận đáy lòng và sẵn sàng nâng đỡ bạn mình vì đại nghĩa."
-  },
-  {
-    id: "tam-va-cam",
-    slug: "tam-va-cam",
-    title: "Tấm và Cám",
-    subtitle: "Ở hiền gặp lành — Sức sống bất diệt của lòng nhân hậu",
-    theme: "Cổ tích dân gian Việt Nam",
-    img: "/assets/story_scholars-CtpupIEr.jpg",
-    summary: "Câu chuyện cổ tích bất hủ của dân tộc Việt Nam kể về nàng Tấm hiền lành, hiếu thảo và hành trình vượt qua muôn vàn gian truân, thử thách để tìm lại hạnh phúc chân chính.",
-    content: [
-      "Ngày xưa, có hai chị em cùng cha khác mẹ là Tấm và Cám. Mẹ Tấm mất sớm, cha Tấm cưới mẹ Cám, rồi không lâu sau cha Tấm cũng qua đời. Tấm phải sống cùng dì ghẻ (mẹ của Cám). Dì ghẻ ác nghiệt, bắt Tấm phải làm hết mọi công việc nặng nhọc trong nhà, trong khi Cám thì được nuông chiều, chỉ việc ăn chơi.",
-      "Một hôm, dì ghẻ bảo Tấm và Cám ra đồng bắt cá. Bà hứa đứa nào bắt được nhiều cá hơn sẽ được thưởng. Tấm chăm chỉ bắt cá, chẳng mấy chốc giỏ đã đầy. Cám mải chơi nên chẳng bắt được con nào. Thấy giỏ cá của chị đầy ắp, Cám nảy ra ý xấu. Nó gọi Tấm, \"Chị Tấm ơi, đầu chị lấm lem rồi, chị xuống ao gội cho sạch đi, kẻo về mẹ mắng.\"",
-      "Tấm tin lời em, để giỏ cá nhờ Cám coi rồi lội xuống ao gội đầu. Lợi dụng lúc đó, Cám đã trút hết cá từ giỏ Tấm sang giỏ mình rồi vội vàng chạy về nhà.",
-      "Tấm lên bờ thấy giỏ trống rỗng, liền ngồi khóc nức nở. Bỗng, ông Bụt hiện lên và hỏi, \"Tại sao con khóc?\"",
-      "Tấm kể lại sự tình. Bụt bảo Tấm nhìn vào giỏ xem còn gì không. Tấm nhìn vào thì thấy còn sót lại một con cá bống nhỏ. Bụt dặn Tấm đem cá bống về thả xuống giếng nuôi, mỗi bữa ăn bớt lại một bát cơm đem cho bống ăn và dặn câu thần chú: 'Bống bống bang bang, lên ăn cơm vàng cơm bạc nhà ta, chớ ăn cơm hẩm cháo hoa nhà người'.",
-      "Mẹ con Cám rình biết chuyện, lừa Tấm đi chăn trâu đồng xa rồi ở nhà bắt bống làm thịt. Tấm về không thấy bống đâu, lại ngồi khóc. Bụt hiện lên bảo Tấm tìm xương bống bỏ vào bốn chiếc lọ rồi chôn dưới bốn chân giường.",
-      "Đến ngày hội làng mở hội, mẹ con Cám sắm sửa quần áo đẹp đi trẩy hội, còn bắt Tấm ở nhà nhặt một đấu thóc trộn lẫn với một đấu gạo. Tấm khóc, Bụt sai đàn chim sẻ xuống nhặt giúp, rồi bảo Tấm đào bốn chiếc lọ dưới chân giường lên. Lọ thứ nhất biến ra bộ quần áo dạ hội lộng lẫy, lọ thứ hai biến ra đôi giày thêu tinh xảo, lọ thứ ba biến ra con ngựa hồng có yên cương chắc chắn.",
-      "Tấm mừng rỡ thay đồ, cưỡi ngựa tiến về kinh thành. Trên đường đi qua chỗ lội, Tấm vô tình đánh rơi một chiếc giày thêu mà không kịp nhặt.",
-      "Đoàn quân hộ tống nhà Vua đi ngang qua chỗ lầy đó. Hai con voi ngự đầu đàn bỗng dưng cứ cắm đầu xuống đất, không chịu đi tiếp. Vua sai lính kiểm tra, tìm thấy chiếc giày thêu tinh xảo. Vua ngắm nghía và phán, \"Giày đẹp thế này, hẳn người đi nó cũng rất đẹp.\"",
-      "Nhà Vua liền hạ lệnh cho tất cả các cô gái đi trẩy hội ướm thử giày, ai đi vừa sẽ được lấy làm Hoàng hậu. Bao nhiêu người chen chúc thử giày đều không vừa, kể cả Cám. Đến lượt Tấm bước lên ướm thử, chân nàng vừa như in, lại rút thêm chiếc giày thứ hai từ trong bọc ra. Nhà Vua mừng rỡ, lập tức rước Tấm về cung làm Hoàng hậu.",
-      "Dù sau này trải qua bao kiếp nạn do mẹ con Cám hãm hại, Tấm lần lượt hóa thân thành chim vàng anh, cây xoan đào, khung cửi và quả thị để bảo vệ lẽ phải, cuối cùng nàng trở lại làm người, đoàn tụ hạnh phúc bên nhà Vua. Mẹ con Cám độc ác phải chịu quả báo thích đáng."
-    ],
-    moral: "Ở hiền gặp lành, cái thiện luôn chiến thắng cái ác. Lòng nhân hậu, sự kiên trì vượt qua nghịch cảnh sẽ luôn được đền đáp xứng đáng."
   }
 ];
