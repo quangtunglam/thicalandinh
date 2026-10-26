@@ -31,6 +31,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSearch }) => {
           <img
             src="/assets/LOGO_PNG_1-500_500_1786962282661-DCgqGFGg.png"
             alt="Thi Ca Lan Đình"
+            width="64"
+            height="64"
+            decoding="async"
             className="h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
           />
           <span className="font-serif font-bold text-lg md:text-xl tracking-wide text-foreground">

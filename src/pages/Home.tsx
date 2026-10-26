@@ -35,13 +35,18 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
     <div className="w-full">
       {/* 1. Hero Section */}
       <section className="relative w-full min-h-[460px] sm:min-h-[500px] md:min-h-[560px] lg:min-h-[640px] flex items-center overflow-hidden py-16 sm:py-20 md:py-28">
-        {/* Background Image with optimized focal point */}
+        {/* Background Image with optimized focal point & WebP format */}
         <div className="absolute inset-0 z-0">
-          <img
-            src="/assets/ChatGPT_Image_12_47_39_17_thg_8__2026_1786963672074-HdoORWX4.png"
-            alt="Thi Ca Lan Đình"
-            className="w-full h-full object-cover object-[75%_center] sm:object-right"
-          />
+          <picture>
+            <source srcSet="/assets/banner_hero.webp" type="image/webp" />
+            <img
+              src="/assets/banner_hero.jpg"
+              alt="Thi Ca Lan Đình"
+              fetchPriority="high"
+              decoding="async"
+              className="w-full h-full object-cover object-[75%_center] sm:object-right"
+            />
+          </picture>
           {/* Mobile Overlay: High contrast warm tint ensuring text legibility */}
           <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/70 to-background/40 sm:hidden" />
           {/* Desktop Overlay: Seamless left-to-right fade */}
@@ -102,6 +107,10 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
                 <img
                   src={cat.img}
                   alt={cat.label}
+                  loading="lazy"
+                  decoding="async"
+                  width="80"
+                  height="80"
                   className="w-20 h-20 object-contain flex-shrink-0 group-hover:scale-110 transition-transform duration-300"
                 />
                 <div>
@@ -139,6 +148,8 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
                 <img
                   src={poem.img}
                   alt={poem.title}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-500" />
@@ -207,6 +218,8 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
                     <img
                       src={featuredStory.img}
                       alt={featuredStory.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                   </div>
@@ -255,6 +268,10 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
                   <img
                     src={virtue.img}
                     alt={virtue.char}
+                    loading="lazy"
+                    decoding="async"
+                    width="64"
+                    height="64"
                     className="shrink-0 w-16 h-16 object-contain transition-transform group-hover:scale-110 duration-300"
                   />
                   <div>
@@ -304,6 +321,10 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
                       <img
                         src={scholar.img}
                         alt={scholar.name}
+                        loading="lazy"
+                        decoding="async"
+                        width="128"
+                        height="128"
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale-[30%] group-hover:grayscale-0"
                       />
                     </div>
