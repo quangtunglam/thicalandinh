@@ -49,8 +49,8 @@ export const StoryDetail: React.FC = () => {
       {/* Story Content */}
       <article className="font-serif text-lg text-foreground/90 leading-relaxed space-y-6 text-justify">
         {story.content.map((paragraph, index) => (
-          <p key={index} className="indent-8 first:indent-0">
-            {paragraph}
+          <p key={index} className="leading-relaxed">
+            {paragraph.trim()}
           </p>
         ))}
       </article>

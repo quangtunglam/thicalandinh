@@ -251,7 +251,7 @@ export const Admin: React.FC = () => {
         theme: storyForm.theme?.trim() || 'Điển cố',
         img: finalImg,
         summary: storyForm.summary?.trim() || '',
-        content: (storyForm.content || []).filter(c => c.trim() !== ''),
+        content: (storyForm.content || []).map(c => c.trim()).filter(c => c !== ''),
         moral: storyForm.moral?.trim() || '',
       };
 
