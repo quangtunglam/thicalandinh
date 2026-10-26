@@ -204,9 +204,15 @@ export const apiService = {
       try {
         const parsed: Story[] = JSON.parse(local);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          const normalize = (str: string) =>
+            str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]/g, '');
+
           const result: Story[] = [...parsed];
           for (const s of baseList) {
-            if (!result.some(r => r.id === s.id || r.slug === s.slug)) {
+            const isDup = result.some(
+              r => r.id === s.id || r.slug === s.slug || normalize(r.title) === normalize(s.title)
+            );
+            if (!isDup) {
               result.push(s);
             }
           }
