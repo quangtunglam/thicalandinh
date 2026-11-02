@@ -55,12 +55,23 @@ function toHtml(val: string[] | string): string {
     .replace(/<\/?br\s*\/?>/gi, '<br>');
 }
 
+// Clean junk spans created by browser or copy-paste
+function cleanJunkSpans(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<span style="[^"]*font-size:\s*1rem;?[^"]*">(.*?)<\/span>/gi, '$1')
+    .replace(/<span style="[^"]*color:\s*rgb\(44,\s*40,\s*38\);?[^"]*">(.*?)<\/span>/gi, '$1')
+    .replace(/<span style="">(.*?)<\/span>/gi, '$1')
+    .replace(/<span>(.*?)<\/span>/gi, '$1');
+}
+
 // Convert contentEditable HTML into an array of clean paragraphs
 function toParagraphs(html: string): string[] {
   if (!html || !html.trim()) return [];
 
+  const cleaned = cleanJunkSpans(html);
   const temp = document.createElement('div');
-  temp.innerHTML = html;
+  temp.innerHTML = cleaned;
 
   const result: string[] = [];
 
@@ -71,14 +82,14 @@ function toParagraphs(html: string): string[] {
       const text = child.textContent?.trim();
       const childHtml = child.outerHTML?.trim();
       if (childHtml && (text || child.querySelector('img, hr, audio, br'))) {
-        result.push(childHtml);
+        result.push(cleanJunkSpans(childHtml));
       }
     }
   }
 
   // If editor used single block or free text
   if (result.length === 0) {
-    return html
+    return cleanJunkSpans(html)
       .split(/\n\n+/)
       .map((p) => p.trim())
       .filter(Boolean);
@@ -134,6 +145,32 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     }
     setCodeValue(initialHtml);
   }, [value]);
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    if (text) {
+      document.execCommand('insertText', false, text);
+      handleInput();
+    }
+  };
+
+  const cleanFormatting = () => {
+    if (isCodeView) return;
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      if (editorRef.current) {
+        editorRef.current.innerHTML = cleanJunkSpans(editorRef.current.innerHTML);
+        handleInput();
+      }
+      return;
+    }
+    document.execCommand('removeFormat', false, undefined);
+    handleInput();
+  };
 
   const handleInput = () => {
     if (!editorRef.current) return;
@@ -539,10 +576,10 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
             type="button"
             onMouseDown={(e) => {
               e.preventDefault();
-              exec('removeFormat');
+              cleanFormatting();
             }}
             className="p-1.5 hover:bg-muted hover:text-primary rounded text-foreground/80 transition-colors"
-            title="Xóa định dạng"
+            title="Chuẩn hóa phông chữ / Xóa định dạng thừa"
           >
             <RemoveFormatting className="w-3.5 h-3.5" />
           </button>
@@ -605,6 +642,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
           contentEditable={!isCodeView}
           onInput={handleInput}
           onBlur={handleInput}
+          onPaste={handlePaste}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               if (e.shiftKey) {
@@ -615,7 +653,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
           }}
           data-placeholder={placeholder}
           style={{ minHeight }}
-          className={`p-4 text-base font-serif leading-relaxed text-foreground focus:outline-none story-rich-content whitespace-pre-line ${
+          className={`p-4 text-lg font-serif leading-relaxed text-foreground focus:outline-none story-rich-content whitespace-pre-line ${
             isCodeView ? 'hidden' : 'block'
           } empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/40 empty:before:italic empty:before:pointer-events-none`}
         />

@@ -184,7 +184,9 @@ export const StoryDetail: React.FC = () => {
           let trimmed = (paragraph || '').trim();
           trimmed = trimmed
             .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br />')
-            .replace(/<\/?br\s*\/?>/gi, '<br />');
+            .replace(/<\/?br\s*\/?>/gi, '<br />')
+            .replace(/<span style="[^"]*font-size:\s*1rem;?[^"]*">(.*?)<\/span>/gi, '$1')
+            .replace(/<span style="[^"]*color:\s*rgb\(44,\s*40,\s*38\);?[^"]*">(.*?)<\/span>/gi, '$1');
 
           const isHtmlBlock = /^<(p|div|h[1-6]|blockquote|ul|ol|table|hr)/i.test(trimmed);
 
