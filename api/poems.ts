@@ -77,6 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           `INSERT INTO poems (id, slug, title, author, category, period, img, featured_quote, verses, original_text, translation, explanation, tags)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
            ON CONFLICT (id) DO UPDATE SET
+             slug = EXCLUDED.slug,
              title = EXCLUDED.title,
              author = EXCLUDED.author,
              category = EXCLUDED.category,

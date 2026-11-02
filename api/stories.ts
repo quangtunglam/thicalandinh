@@ -77,6 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           `INSERT INTO stories (id, slug, title, subtitle, theme, img, summary, content, moral, audio_vi, audio_cs)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
            ON CONFLICT (id) DO UPDATE SET
+             slug = EXCLUDED.slug,
              title = EXCLUDED.title,
              subtitle = EXCLUDED.subtitle,
              theme = EXCLUDED.theme,
