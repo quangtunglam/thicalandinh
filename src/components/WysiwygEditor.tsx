@@ -20,6 +20,7 @@ import {
   Code,
   Eye,
   Type,
+  CornerDownLeft,
 } from 'lucide-react';
 
 export interface WysiwygEditorProps {
@@ -34,8 +35,13 @@ function toHtml(val: string[] | string): string {
   if (Array.isArray(val)) {
     return val
       .map((p) => {
-        const trimmed = (p || '').trim();
+        let trimmed = (p || '').trim();
         if (!trimmed) return '';
+        // Auto convert any &lt;/br&gt; or </br> to <br>
+        trimmed = trimmed
+          .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br>')
+          .replace(/<\/?br\s*\/?>/gi, '<br>');
+
         if (/^<(p|div|h[1-6]|blockquote|ul|ol|table|hr)/i.test(trimmed)) {
           return trimmed;
         }
@@ -44,7 +50,9 @@ function toHtml(val: string[] | string): string {
       .filter(Boolean)
       .join('');
   }
-  return val || '';
+  return (val || '')
+    .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br>')
+    .replace(/<\/?br\s*\/?>/gi, '<br>');
 }
 
 // Convert contentEditable HTML into an array of clean paragraphs
@@ -62,7 +70,7 @@ function toParagraphs(html: string): string[] {
       const child = temp.children[i];
       const text = child.textContent?.trim();
       const childHtml = child.outerHTML?.trim();
-      if (childHtml && (text || child.querySelector('img, hr, audio'))) {
+      if (childHtml && (text || child.querySelector('img, hr, audio, br'))) {
         result.push(childHtml);
       }
     }
@@ -70,8 +78,7 @@ function toParagraphs(html: string): string[] {
 
   // If editor used single block or free text
   if (result.length === 0) {
-    const raw = html.replace(/<br\s*\/?>/gi, '\n');
-    return raw
+    return html
       .split(/\n\n+/)
       .map((p) => p.trim())
       .filter(Boolean);
@@ -109,7 +116,7 @@ const COLOR_PRESETS = [
 export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   value,
   onChange,
-  placeholder = 'Nhập nội dung câu chuyện tại đây... Sử dụng thanh công cụ bên trên để chỉnh phông chữ, cỡ chữ, căn dòng, in đậm...',
+  placeholder = 'Nhập nội dung câu chuyện tại đây... Sử dụng thanh công cụ bên trên để chỉnh phông chữ, cỡ chữ, căn dòng, xuống dòng, in đậm...',
   minHeight = '320px',
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -131,7 +138,16 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   const handleInput = () => {
     if (!editorRef.current) return;
     isUpdatingRef.current = true;
-    const html = editorRef.current.innerHTML;
+    let html = editorRef.current.innerHTML;
+
+    // Auto-fix any accidental typed </br>, <br>, &lt;/br&gt;, &lt;br&gt; into real <br>
+    if (/&lt;\/?br\s*\/?&gt;/i.test(html) || /<\/?br\s*\/?>/i.test(html)) {
+      html = html
+        .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br>')
+        .replace(/<\/?br\s*\/?>/gi, '<br>');
+      editorRef.current.innerHTML = html;
+    }
+
     setCodeValue(html);
     const paragraphs = toParagraphs(html);
     onChange(paragraphs);
@@ -141,7 +157,10 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
+    let val = e.target.value;
+    val = val
+      .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br>')
+      .replace(/<\/?br\s*\/?>/gi, '<br>');
     setCodeValue(val);
     const paragraphs = toParagraphs(val);
     onChange(paragraphs);
@@ -159,6 +178,28 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     handleInput();
   };
 
+  // Insert a clean <br> element at the cursor position for line breaks
+  const insertLineBreak = () => {
+    if (isCodeView) {
+      setCodeValue((prev) => prev + '\n');
+      return;
+    }
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    const br = document.createElement('br');
+    range.insertNode(br);
+    range.setStartAfter(br);
+    range.setEndAfter(br);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    handleInput();
+  };
+
   // Helper to wrap selected text in custom CSS style
   const applyCustomStyle = (property: string, styleValue: string) => {
     if (isCodeView) return;
@@ -168,7 +209,6 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-      // If no text is selected, try applying to parent block
       if (property === 'font-family') {
         exec('fontName', styleValue);
       }
@@ -304,6 +344,20 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
             <Strikethrough className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {/* Line Break / Xuống dòng Button */}
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            insertLineBreak();
+          }}
+          className="flex items-center gap-1 px-2.5 py-1 bg-background/80 border border-border/80 hover:border-primary/50 hover:bg-primary/10 rounded text-xs text-foreground/80 hover:text-primary transition-all shadow-xs"
+          title="Xuống dòng / Ngắt dòng thơ hoặc đối thoại (Shift + Enter)"
+        >
+          <CornerDownLeft className="w-3.5 h-3.5 text-primary" />
+          <span className="text-[11px] font-medium hidden sm:inline">Xuống dòng</span>
+        </button>
 
         {/* Text Color Picker */}
         <div className="relative">
@@ -551,9 +605,17 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
           contentEditable={!isCodeView}
           onInput={handleInput}
           onBlur={handleInput}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              if (e.shiftKey) {
+                e.preventDefault();
+                insertLineBreak();
+              }
+            }
+          }}
           data-placeholder={placeholder}
           style={{ minHeight }}
-          className={`p-4 text-base font-serif leading-relaxed text-foreground focus:outline-none story-rich-content ${
+          className={`p-4 text-base font-serif leading-relaxed text-foreground focus:outline-none story-rich-content whitespace-pre-line ${
             isCodeView ? 'hidden' : 'block'
           } empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/40 empty:before:italic empty:before:pointer-events-none`}
         />
@@ -564,7 +626,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
             value={codeValue}
             onChange={handleCodeChange}
             style={{ minHeight }}
-            className="w-full p-4 font-mono text-xs leading-relaxed bg-muted/20 text-foreground focus:outline-none resize-y"
+            className="w-full p-4 font-mono text-xs leading-relaxed bg-muted/20 text-foreground focus:outline-none resize-y whitespace-pre-line"
             placeholder="Chỉnh sửa mã HTML trực tiếp..."
           />
         )}
@@ -581,7 +643,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
           </span>
         </div>
         <div className="text-[10px] text-foreground/50 italic">
-          Bôi đen chữ rồi bấm thanh công cụ để chỉnh phông chữ, cỡ chữ, màu sắc
+          Bấm nút <strong>"Xuống dòng"</strong> hoặc nhấn <strong>Shift + Enter</strong> để ngắt dòng thơ / đối thoại
         </div>
       </div>
     </div>

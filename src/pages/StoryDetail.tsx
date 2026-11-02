@@ -179,16 +179,20 @@ export const StoryDetail: React.FC = () => {
       )}
 
       {/* Story Content */}
-      <article className="font-serif text-lg text-foreground/90 leading-relaxed space-y-6 text-justify story-rich-content">
+      <article className="font-serif text-lg text-foreground/90 leading-relaxed space-y-6 text-justify story-rich-content whitespace-pre-line">
         {story.content.map((paragraph, index) => {
-          const trimmed = (paragraph || '').trim();
+          let trimmed = (paragraph || '').trim();
+          trimmed = trimmed
+            .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br />')
+            .replace(/<\/?br\s*\/?>/gi, '<br />');
+
           const isHtmlBlock = /^<(p|div|h[1-6]|blockquote|ul|ol|table|hr)/i.test(trimmed);
 
           if (isHtmlBlock) {
             return (
               <div
                 key={index}
-                className="leading-relaxed"
+                className="leading-relaxed whitespace-pre-line"
                 dangerouslySetInnerHTML={{ __html: trimmed }}
               />
             );
@@ -197,7 +201,7 @@ export const StoryDetail: React.FC = () => {
           return (
             <p
               key={index}
-              className="leading-relaxed"
+              className="leading-relaxed whitespace-pre-line"
               dangerouslySetInnerHTML={{ __html: trimmed }}
             />
           );
