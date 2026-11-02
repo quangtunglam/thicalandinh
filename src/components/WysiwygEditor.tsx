@@ -134,16 +134,26 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   const [isCodeView, setIsCodeView] = useState(false);
   const [codeValue, setCodeValue] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const isUpdatingRef = useRef(false);
+  const isFocusedRef = useRef(false);
+  const lastHtmlRef = useRef('');
 
-  // Sync incoming value to editor DOM
+  // Sync incoming value to editor DOM without disturbing the active cursor
   useEffect(() => {
-    if (isUpdatingRef.current) return;
-    const initialHtml = toHtml(value);
-    if (editorRef.current && editorRef.current.innerHTML !== initialHtml) {
-      editorRef.current.innerHTML = initialHtml;
+    // If user is actively editing inside the editor, NEVER overwrite DOM innerHTML!
+    if (isFocusedRef.current || (editorRef.current && editorRef.current.contains(document.activeElement))) {
+      return;
     }
-    setCodeValue(initialHtml);
+
+    const nextHtml = toHtml(value);
+    if (nextHtml === lastHtmlRef.current) {
+      return;
+    }
+
+    if (editorRef.current && editorRef.current.innerHTML !== nextHtml) {
+      editorRef.current.innerHTML = nextHtml;
+      lastHtmlRef.current = nextHtml;
+    }
+    setCodeValue(nextHtml);
   }, [value]);
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
@@ -172,25 +182,30 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     handleInput();
   };
 
+  // Pure input handler: NEVER mutate innerHTML while typing so cursor never jumps!
   const handleInput = () => {
     if (!editorRef.current) return;
-    isUpdatingRef.current = true;
-    let html = editorRef.current.innerHTML;
-
-    // Auto-fix any accidental typed </br>, <br>, &lt;/br&gt;, &lt;br&gt; into real <br>
-    if (/&lt;\/?br\s*\/?&gt;/i.test(html) || /<\/?br\s*\/?>/i.test(html)) {
-      html = html
-        .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br>')
-        .replace(/<\/?br\s*\/?>/gi, '<br>');
-      editorRef.current.innerHTML = html;
-    }
-
+    const html = editorRef.current.innerHTML;
+    lastHtmlRef.current = html;
     setCodeValue(html);
     const paragraphs = toParagraphs(html);
     onChange(paragraphs);
-    setTimeout(() => {
-      isUpdatingRef.current = false;
-    }, 50);
+  };
+
+  // Only normalize literal typed </br> when the user finishes and clicks away
+  const handleBlur = () => {
+    isFocusedRef.current = false;
+    if (!editorRef.current) return;
+    let html = editorRef.current.innerHTML;
+    if (/&lt;\/?br\s*\/?&gt;/i.test(html) || /<\/br>/i.test(html)) {
+      html = html
+        .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br>')
+        .replace(/<\/br>/gi, '<br>');
+      editorRef.current.innerHTML = html;
+      lastHtmlRef.current = html;
+      setCodeValue(html);
+      onChange(toParagraphs(html));
+    }
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -612,7 +627,17 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
         {/* Toggle Mode: Visual WYSIWYG ↔ Raw HTML/Text */}
         <button
           type="button"
-          onClick={() => setIsCodeView(!isCodeView)}
+          onClick={() => {
+            if (!isCodeView) {
+              setCodeValue(editorRef.current?.innerHTML || '');
+            } else {
+              if (editorRef.current) {
+                editorRef.current.innerHTML = codeValue;
+                lastHtmlRef.current = codeValue;
+              }
+            }
+            setIsCodeView(!isCodeView);
+          }}
           className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all border ${
             isCodeView
               ? 'bg-primary text-primary-foreground border-primary shadow-xs'
@@ -640,8 +665,11 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
         <div
           ref={editorRef}
           contentEditable={!isCodeView}
+          onFocus={() => {
+            isFocusedRef.current = true;
+          }}
+          onBlur={handleBlur}
           onInput={handleInput}
-          onBlur={handleInput}
           onPaste={handlePaste}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
