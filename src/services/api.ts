@@ -90,9 +90,9 @@ export const apiService = {
       const validUser = username.trim().toLowerCase() === 'admin';
       const validPass = password === 'thicalandinh2026' || password === 'admin123';
       if (validUser && validPass) {
-        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, 'local-admin-token');
+        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, 'thicalandinh2026');
         localStorage.setItem(STORAGE_KEYS.AUTH_USER, username);
-        return { success: true, token: 'local-admin-token' };
+        return { success: true, token: 'thicalandinh2026' };
       }
       return {
         success: false,
@@ -165,7 +165,7 @@ export const apiService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token || 'thicalandinh2026'}`,
+          'Authorization': `Bearer ${(!token || token === 'local-admin-token') ? 'thicalandinh2026' : token}`,
         },
         body: JSON.stringify(poem),
       });
@@ -194,7 +194,7 @@ export const apiService = {
       await fetch(`${API_BASE}/poems?id=${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token || 'thicalandinh2026'}`,
+          'Authorization': `Bearer ${(!token || token === 'local-admin-token') ? 'thicalandinh2026' : token}`,
         },
       });
     } catch {}
@@ -262,7 +262,7 @@ export const apiService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token || 'thicalandinh2026'}`,
+          'Authorization': `Bearer ${(!token || token === 'local-admin-token') ? 'thicalandinh2026' : token}`,
         },
         body: JSON.stringify(story),
       });
@@ -292,7 +292,7 @@ export const apiService = {
       await fetch(`${API_BASE}/stories?id=${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token || 'thicalandinh2026'}`,
+          'Authorization': `Bearer ${(!token || token === 'local-admin-token') ? 'thicalandinh2026' : token}`,
         },
       });
     } catch {}
