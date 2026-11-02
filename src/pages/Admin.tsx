@@ -26,6 +26,21 @@ import { audioStorage } from '@/services/audioStorage';
 import { WysiwygEditor } from '@/components/WysiwygEditor';
 
 // Helper: Compress an uploaded file using an offscreen Canvas
+
+// Helper: Convert Vietnamese string to clean URL slug
+const toSlug = (str: string): string => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+};
+
 const compressImageFile = (file: File, maxWidth = 900, maxHeight = 900, quality = 0.82): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -210,7 +225,7 @@ export const Admin: React.FC = () => {
 
       const newPoem: Poem = {
         id: poemForm.id || 'poem-' + Date.now(),
-        slug: poemForm.slug || poemForm.title.toLowerCase().replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s-]/g, '').trim().replace(/\s+/g, '-'),
+        slug: (poemForm.slug && poemForm.slug.trim()) ? toSlug(poemForm.slug.trim()) : toSlug(poemForm.title || ''),
         title: poemForm.title.trim(),
         author: poemForm.author.trim(),
         category: (poemForm.category as any) || 'Đường luật',
@@ -251,7 +266,7 @@ export const Admin: React.FC = () => {
 
       const newStory: Story = {
         id: storyForm.id || 'story-' + Date.now(),
-        slug: storyForm.slug || storyForm.title.toLowerCase().replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s-]/g, '').trim().replace(/\s+/g, '-'),
+        slug: (storyForm.slug && storyForm.slug.trim()) ? toSlug(storyForm.slug.trim()) : toSlug(storyForm.title || ''),
         title: storyForm.title.trim(),
         subtitle: storyForm.subtitle?.trim() || '',
         theme: storyForm.theme?.trim() || 'Điển cố',
@@ -290,7 +305,7 @@ export const Admin: React.FC = () => {
 
       const newScholar: Scholar = {
         id: scholarForm.id !== undefined ? scholarForm.id : Date.now(),
-        slug: scholarForm.slug || scholarForm.name.toLowerCase().replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s-]/g, '').trim().replace(/\s+/g, '-'),
+        slug: (scholarForm.slug && scholarForm.slug.trim()) ? toSlug(scholarForm.slug.trim()) : toSlug(scholarForm.name || ''),
         name: scholarForm.name.trim(),
         title: scholarForm.title?.trim() || '',
         era: scholarForm.era?.trim() || '',
@@ -798,7 +813,15 @@ export const Admin: React.FC = () => {
                     type="text"
                     required
                     value={poemForm.title || ''}
-                    onChange={(e) => setPoemForm({ ...poemForm, title: e.target.value })}
+                    onChange={(e) => {
+                      const newTitle = e.target.value;
+                      const isAutoSync = !poemForm.slug || poemForm.slug === toSlug(poemForm.title || '');
+                      setPoemForm(prev => ({
+                        ...prev,
+                        title: newTitle,
+                        ...(isAutoSync ? { slug: toSlug(newTitle) } : {})
+                      }));
+                    }}
                     placeholder="VD: Côn Sơn Ca"
                     className="w-full bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
                   />
@@ -812,6 +835,40 @@ export const Admin: React.FC = () => {
                     onChange={(e) => setPoemForm({ ...poemForm, author: e.target.value })}
                     placeholder="VD: Nguyễn Trãi"
                     className="w-full bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase text-foreground">
+                    Đường dẫn bài thơ (URL / Slug)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (poemForm.title) {
+                        setPoemForm(prev => ({ ...prev, slug: toSlug(prev.title || '') }));
+                      }
+                    }}
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                  >
+                    <span>🔄 Gợi ý từ tựa đề</span>
+                  </button>
+                </div>
+                <div className="flex items-center rounded border border-border bg-background focus-within:border-primary overflow-hidden shadow-xs">
+                  <span className="px-3 py-2 bg-muted/60 text-foreground/60 text-xs font-mono border-r border-border shrink-0 select-none hidden sm:inline">
+                    https://thicalandinh.com/#/thi-ca/
+                  </span>
+                  <input
+                    type="text"
+                    value={poemForm.slug || ''}
+                    onChange={(e) => {
+                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s-]/g, '').replace(/\s+/g, '-');
+                      setPoemForm({ ...poemForm, slug: val });
+                    }}
+                    placeholder={toSlug(poemForm.title || '') || 'vi-du-con-son-ca'}
+                    className="flex-1 bg-transparent px-3 py-2 text-xs font-mono text-foreground focus:outline-none"
                   />
                 </div>
               </div>
@@ -957,10 +1014,56 @@ export const Admin: React.FC = () => {
                   type="text"
                   required
                   value={storyForm.title || ''}
-                  onChange={(e) => setStoryForm({ ...storyForm, title: e.target.value })}
+                  onChange={(e) => {
+                    const newTitle = e.target.value;
+                    const isAutoSync = !storyForm.slug || storyForm.slug === toSlug(storyForm.title || '');
+                    setStoryForm(prev => ({
+                      ...prev,
+                      title: newTitle,
+                      ...(isAutoSync ? { slug: toSlug(newTitle) } : {})
+                    }));
+                  }}
                   placeholder="VD: Ngu Công Dời Núi"
                   className="w-full bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
                 />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase text-foreground">
+                    Đường dẫn liên kết bài viết (URL / Slug)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (storyForm.title) {
+                        setStoryForm(prev => ({ ...prev, slug: toSlug(prev.title || '') }));
+                      }
+                    }}
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                    title="Bấm để tự động tạo lại đường dẫn chuẩn từ tựa đề bài viết"
+                  >
+                    <span>🔄 Gợi ý từ tựa đề</span>
+                  </button>
+                </div>
+                <div className="flex items-center rounded border border-border bg-background focus-within:border-primary overflow-hidden shadow-xs">
+                  <span className="px-3 py-2 bg-muted/60 text-foreground/60 text-xs font-mono border-r border-border shrink-0 select-none hidden sm:inline">
+                    https://thicalandinh.com/#/cau-chuyen/
+                  </span>
+                  <input
+                    type="text"
+                    value={storyForm.slug || ''}
+                    onChange={(e) => {
+                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s-]/g, '').replace(/\s+/g, '-');
+                      setStoryForm({ ...storyForm, slug: val });
+                    }}
+                    placeholder={toSlug(storyForm.title || '') || 'vi-du-tam-cam'}
+                    className="flex-1 bg-transparent px-3 py-2 text-xs font-mono text-foreground focus:outline-none"
+                  />
+                </div>
+                <p className="text-[11px] text-foreground/50 mt-1 italic">
+                  Gợi ý đường dẫn trên thanh trình duyệt web. Bạn có thể sửa theo ý muốn (dùng chữ thường, cách nhau bằng dấu gạch ngang).
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1190,7 +1293,15 @@ export const Admin: React.FC = () => {
                     type="text"
                     required
                     value={scholarForm.name || ''}
-                    onChange={(e) => setScholarForm({ ...scholarForm, name: e.target.value })}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      const isAutoSync = !scholarForm.slug || scholarForm.slug === toSlug(scholarForm.name || '');
+                      setScholarForm(prev => ({
+                        ...prev,
+                        name: newName,
+                        ...(isAutoSync ? { slug: toSlug(newName) } : {})
+                      }));
+                    }}
                     placeholder="VD: Cao Bá Quát"
                     className="w-full bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
                   />
@@ -1203,6 +1314,40 @@ export const Admin: React.FC = () => {
                     onChange={(e) => setScholarForm({ ...scholarForm, era: e.target.value })}
                     placeholder="VD: 1809 – 1855 (Thời Nguyễn)"
                     className="w-full bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase text-foreground">
+                    Đường dẫn danh nhân (URL / Slug)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (scholarForm.name) {
+                        setScholarForm(prev => ({ ...prev, slug: toSlug(prev.name || '') }));
+                      }
+                    }}
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                  >
+                    <span>🔄 Gợi ý từ tên danh nhân</span>
+                  </button>
+                </div>
+                <div className="flex items-center rounded border border-border bg-background focus-within:border-primary overflow-hidden shadow-xs">
+                  <span className="px-3 py-2 bg-muted/60 text-foreground/60 text-xs font-mono border-r border-border shrink-0 select-none hidden sm:inline">
+                    https://thicalandinh.com/#/danh-nhan/
+                  </span>
+                  <input
+                    type="text"
+                    value={scholarForm.slug || ''}
+                    onChange={(e) => {
+                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s-]/g, '').replace(/\s+/g, '-');
+                      setScholarForm({ ...scholarForm, slug: val });
+                    }}
+                    placeholder={toSlug(scholarForm.name || '') || 'vi-du-cao-ba-quat'}
+                    className="flex-1 bg-transparent px-3 py-2 text-xs font-mono text-foreground focus:outline-none"
                   />
                 </div>
               </div>
