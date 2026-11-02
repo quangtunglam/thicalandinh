@@ -220,7 +220,7 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
                       alt={featuredStory.title}
                       loading="lazy"
                       decoding="async"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      className="w-full h-full object-cover object-bottom group-hover:scale-105 transition-transform duration-700"
                     />
                   </div>
                   <p className="font-serif text-foreground/80 leading-relaxed mb-8 text-justify">

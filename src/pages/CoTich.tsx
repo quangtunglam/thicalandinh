@@ -49,7 +49,7 @@ export const CoTich: React.FC = () => {
               <img
                 src={story.img}
                 alt={story.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                className="w-full h-full object-cover object-bottom group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute top-4 left-4 bg-background/90 backdrop-blur px-3 py-1 rounded text-xs font-semibold text-primary uppercase tracking-wider">
                 {story.theme}

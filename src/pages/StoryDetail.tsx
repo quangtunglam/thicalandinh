@@ -101,8 +101,12 @@ export const StoryDetail: React.FC = () => {
       </div>
 
       {/* Banner image */}
-      <div className="aspect-video w-full rounded-lg overflow-hidden border border-border mb-10 shadow-sm">
-        <img src={story.img} alt={story.title} className="w-full h-full object-cover" />
+      <div className="w-full rounded-lg overflow-hidden border border-border mb-10 shadow-sm bg-card/40">
+        <img
+          src={story.img}
+          alt={story.title}
+          className="w-full h-auto object-contain mx-auto block"
+        />
       </div>
 
       {/* Audio Reading Player */}
