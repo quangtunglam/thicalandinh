@@ -179,12 +179,29 @@ export const StoryDetail: React.FC = () => {
       )}
 
       {/* Story Content */}
-      <article className="font-serif text-lg text-foreground/90 leading-relaxed space-y-6 text-justify">
-        {story.content.map((paragraph, index) => (
-          <p key={index} className="leading-relaxed">
-            {paragraph.trim()}
-          </p>
-        ))}
+      <article className="font-serif text-lg text-foreground/90 leading-relaxed space-y-6 text-justify story-rich-content">
+        {story.content.map((paragraph, index) => {
+          const trimmed = (paragraph || '').trim();
+          const isHtmlBlock = /^<(p|div|h[1-6]|blockquote|ul|ol|table|hr)/i.test(trimmed);
+
+          if (isHtmlBlock) {
+            return (
+              <div
+                key={index}
+                className="leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: trimmed }}
+              />
+            );
+          }
+
+          return (
+            <p
+              key={index}
+              className="leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: trimmed }}
+            />
+          );
+        })}
       </article>
 
       {/* Moral lesson box */}

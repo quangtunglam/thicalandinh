@@ -23,6 +23,7 @@ import {
   Volume2
 } from 'lucide-react';
 import { audioStorage } from '@/services/audioStorage';
+import { WysiwygEditor } from '@/components/WysiwygEditor';
 
 // Helper: Compress an uploaded file using an offscreen Canvas
 const compressImageFile = (file: File, maxWidth = 900, maxHeight = 900, quality = 0.82): Promise<string> => {
@@ -1115,13 +1116,15 @@ export const Admin: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase mb-1">Toàn văn câu chuyện (Mỗi đoạn cách nhau một dòng trống)</label>
-                <textarea
-                  rows={8}
-                  value={(storyForm.content || []).join('\n\n')}
-                  onChange={(e) => setStoryForm({ ...storyForm, content: e.target.value.split('\n\n') })}
-                  placeholder="Đoạn 1...&#10;&#10;Đoạn 2...&#10;&#10;Đoạn 3..."
-                  className="w-full bg-background border border-border rounded p-3 text-sm font-serif focus:outline-none focus:border-primary leading-relaxed"
+                <label className="block text-xs font-bold uppercase mb-1.5 flex items-center justify-between">
+                  <span>Toàn văn câu chuyện & Định dạng chữ</span>
+                  <span className="text-[11px] text-primary font-normal">Thanh WYSIWYG chỉnh phông chữ, cỡ chữ, căn lề</span>
+                </label>
+                <WysiwygEditor
+                  value={storyForm.content || []}
+                  onChange={(paragraphs: string[]) => setStoryForm({ ...storyForm, content: paragraphs })}
+                  placeholder="Nhập nội dung câu chuyện tại đây... Dùng thanh công cụ phía trên để chỉnh phông chữ, cỡ chữ, căn lề, in đậm, đổi màu..."
+                  minHeight="320px"
                 />
               </div>
 
