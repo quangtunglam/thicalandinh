@@ -35,6 +35,40 @@ function safeSetStorage(key: string, data: any) {
   }
 }
 
+function cleanStories(list: Story[]): Story[] {
+  const filtered = list.filter(s => {
+    if (!s || !s.title) return false;
+    if (s.id === 'tam-va-cam' && (s.img?.includes('story_scholars') || s.theme === 'Cổ tích dân gian Việt Nam')) {
+      return false;
+    }
+    return true;
+  });
+
+  const normalize = (str: string) =>
+    (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]/g, '');
+
+  const result: Story[] = [];
+  for (const s of filtered) {
+    const normTitle = normalize(s.title);
+    const existingIdx = result.findIndex(
+      r => r.id === s.id || r.slug === s.slug || (normTitle && normalize(r.title) === normTitle)
+    );
+    if (existingIdx === -1) {
+      result.push(s);
+    } else {
+      const existing = result[existingIdx];
+      const sHasCustomImg = s.img && !s.img.includes('story_scholars');
+      const existingHasCustomImg = existing.img && !existing.img.includes('story_scholars');
+      if (sHasCustomImg && !existingHasCustomImg) {
+        result[existingIdx] = s;
+      } else if ((s.content?.length || 0) > (existing.content?.length || 0)) {
+        result[existingIdx] = s;
+      }
+    }
+  }
+  return result;
+}
+
 export const apiService = {
   // --- AUTHENTICATION ---
   async loginAdmin(username: string, password: string): Promise<{ success: boolean; token?: string; error?: string }> {
@@ -193,35 +227,28 @@ export const apiService = {
             audioVi: s.audioVi || s.audio_vi || '',
             audioCs: s.audioCs || s.audio_cs || '',
           }));
+          const cleaned = cleanStories(serverStories);
+          safeSetStorage(STORAGE_KEYS.STORIES, cleaned);
+          return cleaned;
         }
       }
     } catch {}
-
-    const baseList: Story[] = serverStories.length > 0 ? [...serverStories] : [...STORIES];
 
     const local = localStorage.getItem(STORAGE_KEYS.STORIES);
     if (local) {
       try {
         const parsed: Story[] = JSON.parse(local);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const normalize = (str: string) =>
-            str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]/g, '');
-
-          const result: Story[] = [...parsed];
-          for (const s of baseList) {
-            const isDup = result.some(
-              r => r.id === s.id || r.slug === s.slug || normalize(r.title) === normalize(s.title)
-            );
-            if (!isDup) {
-              result.push(s);
-            }
-          }
-          return result;
+          const cleaned = cleanStories(parsed);
+          safeSetStorage(STORAGE_KEYS.STORIES, cleaned);
+          return cleaned;
         }
       } catch {}
     }
 
-    return baseList;
+    const fallback = cleanStories(STORIES);
+    safeSetStorage(STORAGE_KEYS.STORIES, fallback);
+    return fallback;
   },
 
   async saveStory(story: Story): Promise<boolean> {
@@ -244,13 +271,14 @@ export const apiService = {
     }
 
     const current = await this.getStories();
-    const existingIdx = current.findIndex(s => s.id === story.id);
+    const existingIdx = current.findIndex(s => s.id === story.id || s.slug === story.slug);
     if (existingIdx >= 0) {
       current[existingIdx] = story;
     } else {
       current.unshift(story);
     }
-    safeSetStorage(STORAGE_KEYS.STORIES, current);
+    const cleaned = cleanStories(current);
+    safeSetStorage(STORAGE_KEYS.STORIES, cleaned);
     return true;
   },
 
@@ -270,8 +298,9 @@ export const apiService = {
     } catch {}
 
     const current = await this.getStories();
-    const filtered = current.filter(s => s.id !== id);
-    safeSetStorage(STORAGE_KEYS.STORIES, filtered);
+    const filtered = current.filter(s => s.id !== id && s.slug !== id);
+    const cleaned = cleanStories(filtered);
+    safeSetStorage(STORAGE_KEYS.STORIES, cleaned);
     return true;
   },
 

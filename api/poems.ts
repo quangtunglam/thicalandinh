@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDbPool, initDatabaseSchema } from './_lib/db';
-import { INITIAL_POEMS } from './_lib/seedData';
+import { getDbPool, initDatabaseSchema } from './_lib/db.js';
+import { INITIAL_POEMS } from './_lib/seedData.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS Headers

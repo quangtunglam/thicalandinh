@@ -1,9 +1,10 @@
-import { Pool } from 'pg';
+import pg from 'pg';
+const { Pool } = pg;
 
-let pool: Pool | null = null;
+let pool: any = null;
 
-export function getDbPool(): Pool | null {
-  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+export function getDbPool(): any {
+  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL_NON_POOLING;
   if (!connectionString) {
     return null;
   }
@@ -11,6 +12,9 @@ export function getDbPool(): Pool | null {
     pool = new Pool({
       connectionString,
       ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false },
+    });
+    pool.on('error', (err) => {
+      console.error('Unexpected error on idle pg client', err);
     });
   }
   return pool;

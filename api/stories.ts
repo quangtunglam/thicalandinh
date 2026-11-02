@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDbPool, initDatabaseSchema } from './_lib/db';
-import { INITIAL_STORIES } from './_lib/seedData';
+import { getDbPool, initDatabaseSchema } from './_lib/db.js';
+import { INITIAL_STORIES } from './_lib/seedData.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,6 +14,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const db = getDbPool();
       if (db) {
         await initDatabaseSchema();
+        try {
+          await db.query("DELETE FROM stories WHERE id = 'tam-va-cam' AND (theme = 'Cổ tích dân gian Việt Nam' OR img LIKE '%story_scholars%')");
+        } catch {}
         const result = await db.query('SELECT * FROM stories ORDER BY created_at DESC');
         if (result.rows.length === 0) {
           for (const s of INITIAL_STORIES) {
@@ -31,7 +34,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             audioCs: r.audio_cs || r.audioCs || ''
           })));
         }
-        return res.status(200).json(result.rows.map((r: any) => ({
+        const seenTitles = new Set<string>();
+        const uniqueRows = [];
+        for (const r of result.rows) {
+          const norm = (r.title || '').trim().toLowerCase();
+          if (!seenTitles.has(norm)) {
+            seenTitles.add(norm);
+            uniqueRows.push(r);
+          }
+        }
+        return res.status(200).json(uniqueRows.map((r: any) => ({
           ...r,
           audioVi: r.audio_vi || r.audioVi || '',
           audioCs: r.audio_cs || r.audioCs || ''
