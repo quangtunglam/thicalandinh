@@ -112,7 +112,7 @@ export const INITIAL_STORIES = [
       "Lông chim Vàng Anh bị chôn ở góc vườn, mọc lên hai cây xoan đào tỏa bóng mát sum suê. Vua thường mắc võng ra nằm nghỉ dưới gốc cây. Cám thấy cảnh đó lại ghen tức, về kể với mẹ. Dì ghẻ xúi Cám chặt cây làm khung cửi.",
       "Một lần, Cám ngồi dệt áo cho Vua, nghe tiếng khung cửi kêu, \"Cót ca cót két. Lấy tranh chồng chị. Chị khoét mắt ra.\"",
       "Cám sợ hãi, vội sai người mang khung cửi đi đốt. Từ đống tro, mọc lên một cây thị tươi tốt, chỉ có duy nhất một quả.",
-      "Một hôm, có một bà cụ bán nước đi chợ qua, ngồi nghỉ dưới gốc thị. Thấy quả thị, bà cụ nói, \"Thị ơi thị rụng bị bà giữ để bà ngửi Chứ bà không ăn.\"",
+      "Một hôm, có một bà cụ bán nước đi chợ qua, ngồi nghỉ dưới gốc thị. Thấy quả thị, bà cụ nói, \"Thị ơi thị rơi bị bà, bà để bà ngửi chứ bà không ăn.\"",
       "Nói xong, quả thị rụng ngay vào bị của bà. Bà đem về nhà, để trên gối, chỉ ngửi chứ không ăn.",
       "Từ ngày có quả thị, hàng ngày bà đi chợ, về đến nhà là cơm nước đã dọn sẵn, nhà cửa sạch tinh tươm. Sinh nghi, một hôm bà giả vờ đi chợ rồi quay về rình xem. Bà thấy một cô gái xinh đẹp bước ra từ quả thị, dọn dẹp nhà cửa. Bà vội vàng chạy vào, xé toạc vỏ thị và ôm chầm lấy cô gái. Bà lão nhận cô làm con gái.",
       "Cô gái đó chính là Tấm. Tấm giúp bà lão têm trầu cánh phượng, mở quán nước. Quán của bà lão đông khách vô cùng vì trầu têm khéo và thơm.",
