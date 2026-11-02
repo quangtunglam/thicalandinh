@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Search, X, BookOpen, User, BookMarked, ArrowRight } from 'lucide-react';
 import { POEMS, Poem } from '@/data/poems';
-import { SCHOLARS } from '@/data/scholars';
-import { STORIES } from '@/data/stories';
+import { SCHOLARS, Scholar } from '@/data/scholars';
+import { STORIES, Story } from '@/data/stories';
+import { apiService } from '@/services/api';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -14,6 +15,17 @@ interface SearchModalProps {
 export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectPoem }) => {
   const [query, setQuery] = useState('');
   const [, setLocation] = useLocation();
+  const [poems, setPoems] = useState<Poem[]>(POEMS);
+  const [scholars, setScholars] = useState<Scholar[]>(SCHOLARS);
+  const [stories, setStories] = useState<Story[]>(STORIES);
+
+  useEffect(() => {
+    if (isOpen) {
+      apiService.getPoems().then(setPoems).catch(() => {});
+      apiService.getScholars().then(setScholars).catch(() => {});
+      apiService.getStories().then(setStories).catch(() => {});
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -30,7 +42,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
   if (!isOpen) return null;
 
   const filteredPoems = query.trim()
-    ? POEMS.filter(
+    ? poems.filter(
         (p) =>
           p.title.toLowerCase().includes(query.toLowerCase()) ||
           p.author.toLowerCase().includes(query.toLowerCase()) ||
@@ -39,7 +51,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
     : [];
 
   const filteredScholars = query.trim()
-    ? SCHOLARS.filter(
+    ? scholars.filter(
         (s) =>
           s.name.toLowerCase().includes(query.toLowerCase()) ||
           s.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -48,7 +60,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
     : [];
 
   const filteredStories = query.trim()
-    ? STORIES.filter(
+    ? stories.filter(
         (st) =>
           st.title.toLowerCase().includes(query.toLowerCase()) ||
           st.summary.toLowerCase().includes(query.toLowerCase())
@@ -143,7 +155,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
                   <div
                     key={scholar.slug}
                     onClick={() => {
-                      setLocation(`/danh-nhan`);
+                      setLocation(`/danh-nhan/${scholar.slug}`);
                       onClose();
                     }}
                     className="p-3 bg-background/50 hover:bg-primary/10 rounded border border-border/50 cursor-pointer flex items-center justify-between transition-colors group"

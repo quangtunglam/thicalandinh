@@ -136,7 +136,7 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-foreground/60">
-          <p>© 2024 Thi Ca Lan Đình. All rights reserved.</p>
+          <p>© 2026 Thi Ca Lan Đình. All rights reserved.</p>
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs">
             <Link href="/terms" className="hover:text-primary transition-colors">
               Điều khoản sử dụng

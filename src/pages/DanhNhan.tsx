@@ -1,9 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRoute } from 'wouter';
 import { SCHOLARS, Scholar } from '@/data/scholars';
+import { apiService } from '@/services/api';
 import { Award, Quote, X } from 'lucide-react';
 
 export const DanhNhan: React.FC = () => {
+  const [match, params] = useRoute('/danh-nhan/:id');
+  const [scholars, setScholars] = useState<Scholar[]>(SCHOLARS);
   const [activeScholar, setActiveScholar] = useState<Scholar | null>(null);
+
+  useEffect(() => {
+    apiService.getScholars().then((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setScholars(data);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (match && params?.id) {
+      const found = scholars.find(
+        (s) => s.slug === params.id || String(s.id) === params.id
+      );
+      if (found) {
+        setActiveScholar(found);
+      }
+    }
+  }, [match, params, scholars]);
 
   return (
     <div className="py-12 max-w-7xl mx-auto px-4 md:px-8">
@@ -22,9 +45,9 @@ export const DanhNhan: React.FC = () => {
 
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        {SCHOLARS.map((scholar) => (
+        {scholars.map((scholar) => (
           <div
-            key={scholar.slug}
+            key={scholar.slug || scholar.id}
             onClick={() => setActiveScholar(scholar)}
             className="bg-card border border-border/80 rounded-lg p-6 flex flex-col items-center text-center hover:border-primary/60 transition-all hover:shadow-lg cursor-pointer group"
           >
@@ -32,6 +55,7 @@ export const DanhNhan: React.FC = () => {
               <img
                 src={scholar.img}
                 alt={scholar.name}
+                loading="lazy"
                 className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-500"
               />
             </div>

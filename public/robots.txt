@@ -1,0 +1,8 @@
+# Robots.txt for https://www.thicalandinh.com
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /dang-bai
+
+Sitemap: https://www.thicalandinh.com/sitemap.xml
