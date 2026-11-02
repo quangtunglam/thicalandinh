@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { Search, X, BookOpen, User, BookMarked, ArrowRight } from 'lucide-react';
+import { Search, X, BookOpen, User, BookMarked, Library, ArrowRight } from 'lucide-react';
 import { POEMS, Poem } from '@/data/poems';
 import { SCHOLARS, Scholar } from '@/data/scholars';
 import { STORIES, Story } from '@/data/stories';
+import { BOOKS, Book } from '@/data/books';
 import { apiService } from '@/services/api';
 
 interface SearchModalProps {
@@ -18,12 +19,14 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
   const [poems, setPoems] = useState<Poem[]>(POEMS);
   const [scholars, setScholars] = useState<Scholar[]>(SCHOLARS);
   const [stories, setStories] = useState<Story[]>(STORIES);
+  const [books, setBooks] = useState<Book[]>(BOOKS);
 
   useEffect(() => {
     if (isOpen) {
       apiService.getPoems().then(setPoems).catch(() => {});
       apiService.getScholars().then(setScholars).catch(() => {});
       apiService.getStories().then(setStories).catch(() => {});
+      apiService.getBooks().then(setBooks).catch(() => {});
     }
   }, [isOpen]);
 
@@ -64,6 +67,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
         (st) =>
           st.title.toLowerCase().includes(query.toLowerCase()) ||
           st.summary.toLowerCase().includes(query.toLowerCase())
+      )
+    : [];
+
+  const filteredBooks = query.trim()
+    ? books.filter(
+        (b) =>
+          b.title.toLowerCase().includes(query.toLowerCase()) ||
+          b.author.toLowerCase().includes(query.toLowerCase()) ||
+          (b.description || '').toLowerCase().includes(query.toLowerCase())
       )
     : [];
 
@@ -109,7 +121,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
             </div>
           )}
 
-          {query.trim() && filteredPoems.length === 0 && filteredScholars.length === 0 && filteredStories.length === 0 && (
+          {query.trim() && filteredPoems.length === 0 && filteredScholars.length === 0 && filteredStories.length === 0 && filteredBooks.length === 0 && (
             <div className="py-8 text-center text-foreground/50 font-serif">
               Không tìm thấy kết quả phù hợp với "{query}"
             </div>
@@ -197,6 +209,35 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
                         {story.title}
                       </h4>
                       <p className="text-xs text-foreground/60 font-serif italic">"{story.subtitle}"</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Books (Library) */}
+          {filteredBooks.length > 0 && (
+            <div>
+              <h3 className="text-xs font-bold text-primary uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <Library className="w-3.5 h-3.5" /> Thư Viện Sách ({filteredBooks.length})
+              </h3>
+              <div className="space-y-1">
+                {filteredBooks.map((book) => (
+                  <div
+                    key={book.id}
+                    onClick={() => {
+                      setLocation('/thu-vien');
+                      onClose();
+                    }}
+                    className="p-3 bg-background/50 hover:bg-primary/10 rounded border border-border/50 cursor-pointer flex items-center justify-between transition-colors group"
+                  >
+                    <div>
+                      <h4 className="font-serif font-bold text-foreground group-hover:text-primary transition-colors">
+                        {book.title}
+                      </h4>
+                      <p className="text-xs text-foreground/60 font-serif">— {book.author} ({book.type})</p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                   </div>

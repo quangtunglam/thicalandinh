@@ -46,7 +46,7 @@ export const audioStorage = {
       keyOrUrl.startsWith('http://') ||
       keyOrUrl.startsWith('https://') ||
       keyOrUrl.startsWith('/assets') ||
-      keyOrUrl.startsWith('data:audio') ||
+      keyOrUrl.startsWith('data:') ||
       keyOrUrl.startsWith('blob:')
     ) {
       return keyOrUrl;

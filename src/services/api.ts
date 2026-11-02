@@ -1,11 +1,14 @@
 import { POEMS, Poem } from '@/data/poems';
 import { STORIES, Story } from '@/data/stories';
 import { SCHOLARS, Scholar } from '@/data/scholars';
+import { BOOKS, Book } from '@/data/books';
+import { audioStorage } from '@/services/audioStorage';
 
 const STORAGE_KEYS = {
   POEMS: 'tcd_poems_v1',
   STORIES: 'tcd_stories_v1',
   SCHOLARS: 'tcd_scholars_v1',
+  BOOKS: 'tcd_books_v1',
   AUTH_TOKEN: 'tcd_admin_token',
   AUTH_USER: 'tcd_admin_username',
 };
@@ -342,6 +345,100 @@ export const apiService = {
     return true;
   },
 
+  // --- BOOKS (LIBRARY) CRUD ---
+  async getBooks(): Promise<Book[]> {
+    try {
+      const res = await fetch(`${API_BASE}/books`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const normalized: Book[] = data.map((b: any) => ({
+            id: b.id,
+            slug: b.slug || b.id,
+            title: b.title,
+            author: b.author || '',
+            type: b.type || 'Thư tịch cổ',
+            size: b.size || '',
+            img: b.img || '/assets/article_1-Bnc_y2PA.jpg',
+            description: b.description || '',
+            fileUrl: b.fileUrl || b.download_url || '',
+            fileName: b.fileName || b.file_name || '',
+          }));
+          safeSetStorage(STORAGE_KEYS.BOOKS, normalized);
+          return normalized;
+        }
+      }
+    } catch {}
+
+    const local = localStorage.getItem(STORAGE_KEYS.BOOKS);
+    if (local) {
+      try {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch {}
+    }
+    return BOOKS;
+  },
+
+  async saveBook(book: Book): Promise<boolean> {
+    if (!this.isAdminLoggedIn()) {
+      throw new Error('Chỉ có Quản trị viên (Admin) mới có quyền đăng hoặc sửa sách trong Thư viện!');
+    }
+
+    const token = this.getAuthToken();
+    try {
+      await fetch(`${API_BASE}/books`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(!token || token === 'local-admin-token') ? 'thicalandinh2026' : token}`,
+        },
+        body: JSON.stringify(book),
+      });
+    } catch (err) {
+      console.warn('Network error saving to /api/books, saving to local cache:', err);
+    }
+
+    const current = await this.getBooks();
+    let localBook = { ...book };
+    if (localBook.fileUrl && localBook.fileUrl.startsWith('data:') && localBook.fileUrl.length > 500000) {
+      const idbKey = `idb:book_${book.id}`;
+      await audioStorage.saveAudio(idbKey, localBook.fileUrl);
+      localBook.fileUrl = idbKey;
+    }
+    const existingIdx = current.findIndex(b => b.id === book.id || (book.slug && b.slug === book.slug));
+    if (existingIdx >= 0) {
+      current[existingIdx] = localBook;
+    } else {
+      current.unshift(localBook);
+    }
+    safeSetStorage(STORAGE_KEYS.BOOKS, current);
+    return true;
+  },
+
+  async deleteBook(id: string): Promise<boolean> {
+    if (!this.isAdminLoggedIn()) {
+      throw new Error('Chỉ có Quản trị viên (Admin) mới có quyền xóa sách khỏi Thư viện!');
+    }
+
+    const token = this.getAuthToken();
+    try {
+      await fetch(`${API_BASE}/books?id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${(!token || token === 'local-admin-token') ? 'thicalandinh2026' : token}`,
+        },
+      });
+    } catch {}
+
+    const current = await this.getBooks();
+    const filtered = current.filter(b => b.id !== id && b.slug !== id);
+    safeSetStorage(STORAGE_KEYS.BOOKS, filtered);
+    return true;
+  },
+
   // Reset to default data
   resetAllData() {
     if (!this.isAdminLoggedIn()) {
@@ -350,5 +447,6 @@ export const apiService = {
     localStorage.removeItem(STORAGE_KEYS.POEMS);
     localStorage.removeItem(STORAGE_KEYS.STORIES);
     localStorage.removeItem(STORAGE_KEYS.SCHOLARS);
+    localStorage.removeItem(STORAGE_KEYS.BOOKS);
   }
 };

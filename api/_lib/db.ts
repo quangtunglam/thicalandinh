@@ -74,11 +74,15 @@ export async function initDatabaseSchema() {
 
     CREATE TABLE IF NOT EXISTS library (
       id VARCHAR(255) PRIMARY KEY,
+      slug VARCHAR(255),
       title VARCHAR(255) NOT NULL,
       author VARCHAR(255),
       type VARCHAR(100),
       size VARCHAR(50),
+      img TEXT,
+      description TEXT,
       download_url TEXT,
+      file_name VARCHAR(255),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
@@ -88,5 +92,9 @@ export async function initDatabaseSchema() {
   try {
     await db.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS audio_vi TEXT;`);
     await db.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS audio_cs TEXT;`);
+    await db.query(`ALTER TABLE library ADD COLUMN IF NOT EXISTS slug VARCHAR(255);`);
+    await db.query(`ALTER TABLE library ADD COLUMN IF NOT EXISTS img TEXT;`);
+    await db.query(`ALTER TABLE library ADD COLUMN IF NOT EXISTS description TEXT;`);
+    await db.query(`ALTER TABLE library ADD COLUMN IF NOT EXISTS file_name VARCHAR(255);`);
   } catch {}
 }

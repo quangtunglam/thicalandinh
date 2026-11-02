@@ -3,6 +3,7 @@ import { apiService } from '@/services/api';
 import { Poem } from '@/data/poems';
 import { Story } from '@/data/stories';
 import { Scholar } from '@/data/scholars';
+import { Book } from '@/data/books';
 import {
   Lock,
   Plus,
@@ -11,6 +12,8 @@ import {
   Feather,
   BookMarked,
   Users,
+  Library,
+  FileText,
   LogOut,
   Check,
   Sparkles,
@@ -114,7 +117,7 @@ export const Admin: React.FC = () => {
   const [usernameInput, setUsernameInput] = useState('admin');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [activeTab, setActiveTab] = useState<'poems' | 'stories' | 'scholars'>('poems');
+  const [activeTab, setActiveTab] = useState<'poems' | 'stories' | 'scholars' | 'books'>('poems');
 
   // Operation states
   const [isSaving, setIsSaving] = useState(false);
@@ -124,12 +127,14 @@ export const Admin: React.FC = () => {
   const [poems, setPoems] = useState<Poem[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [scholars, setScholars] = useState<Scholar[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [notification, setNotification] = useState('');
 
   // Modal / Form states
   const [poemModalOpen, setPoemModalOpen] = useState(false);
   const [storyModalOpen, setStoryModalOpen] = useState(false);
   const [scholarModalOpen, setScholarModalOpen] = useState(false);
+  const [bookModalOpen, setBookModalOpen] = useState(false);
 
   // Form Fields for Poem
   const [poemForm, setPoemForm] = useState<Partial<Poem>>({
@@ -171,15 +176,29 @@ export const Admin: React.FC = () => {
     works: [''],
   });
 
+  // Form Fields for Book (Library)
+  const [bookForm, setBookForm] = useState<Partial<Book>>({
+    title: '',
+    author: '',
+    type: 'Thư tịch cổ',
+    size: '',
+    img: '/assets/article_1-Bnc_y2PA.jpg',
+    description: '',
+    fileUrl: '',
+    fileName: '',
+  });
+
   const loadData = async () => {
-    const [p, s, sc] = await Promise.all([
+    const [p, s, sc, b] = await Promise.all([
       apiService.getPoems(),
       apiService.getStories(),
       apiService.getScholars(),
+      apiService.getBooks(),
     ]);
     setPoems(p);
     setStories(s);
     setScholars(sc);
+    setBooks(b);
   };
 
   useEffect(() => {
@@ -328,6 +347,44 @@ export const Admin: React.FC = () => {
     }
   };
 
+  // --- SAVE BOOK (LIBRARY) ---
+  const handleSaveBook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    if (!bookForm.title?.trim() || !bookForm.author?.trim()) {
+      setFormError('Vui lòng nhập đầy đủ Tên sách / tài liệu và Tác giả!');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const finalImg = bookForm.img ? await compressBase64IfNeeded(bookForm.img) : '/assets/article_1-Bnc_y2PA.jpg';
+
+      const newBook: Book = {
+        id: bookForm.id || 'book-' + Date.now(),
+        slug: (bookForm.slug && bookForm.slug.trim()) ? toSlug(bookForm.slug.trim()) : toSlug(bookForm.title || ''),
+        title: bookForm.title.trim(),
+        author: bookForm.author.trim(),
+        type: bookForm.type?.trim() || 'Thư tịch cổ',
+        size: bookForm.size?.trim() || '10 MB',
+        img: finalImg,
+        description: bookForm.description?.trim() || '',
+        fileUrl: bookForm.fileUrl?.trim() || '',
+        fileName: bookForm.fileName?.trim() || `${toSlug(bookForm.title.trim()) || 'tai-lieu'}.pdf`,
+      };
+
+      await apiService.saveBook(newBook);
+      await loadData();
+      setBookModalOpen(false);
+      showNotify(`Đã lưu sách "${newBook.title}" vào Thư viện thành công!`);
+    } catch (err: any) {
+      console.error('Lỗi khi lưu sách:', err);
+      setFormError('Có lỗi xảy ra khi lưu: ' + (err?.message || 'Vui lòng kiểm tra lại'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // --- DELETE HANDLERS ---
   const handleDeletePoem = async (id: string, title: string) => {
     if (confirm(`Bạn có chắc chắn muốn xóa bài thơ "${title}"?`)) {
@@ -353,6 +410,14 @@ export const Admin: React.FC = () => {
     }
   };
 
+  const handleDeleteBook = async (id: string, title: string) => {
+    if (confirm(`Bạn có chắc chắn muốn xóa sách "${title}" khỏi Thư viện?`)) {
+      await apiService.deleteBook(id);
+      await loadData();
+      showNotify(`Đã xóa sách "${title}" khỏi Thư viện`);
+    }
+  };
+
   // Reset demo data
   const handleResetData = async () => {
     if (confirm('Khôi phục toàn bộ dữ liệu mặc định ban đầu của Thi Ca Lan Đình?')) {
@@ -363,7 +428,7 @@ export const Admin: React.FC = () => {
   };
 
   // --- IMAGE UPLOAD HELPER ---
-  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>, target: 'poem' | 'story' | 'scholar') => {
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>, target: 'poem' | 'story' | 'scholar' | 'book') => {
     const file = e.target.files?.[0];
     if (file) {
       try {
@@ -372,11 +437,61 @@ export const Admin: React.FC = () => {
         if (target === 'poem') setPoemForm(prev => ({ ...prev, img: base64 }));
         if (target === 'story') setStoryForm(prev => ({ ...prev, img: base64 }));
         if (target === 'scholar') setScholarForm(prev => ({ ...prev, img: base64 }));
+        if (target === 'book') setBookForm(prev => ({ ...prev, img: base64 }));
         showNotify('Đã tải và tối ưu hóa ảnh thành công!');
       } catch (err) {
         console.error('Lỗi khi xử lý ảnh:', err);
         showNotify('Không thể xử lý ảnh. Vui lòng thử lại!');
       }
+    }
+  };
+
+  // --- BOOK FILE UPLOAD HELPER (PDF, EPUB, DOCX...) ---
+  const handleBookFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validExt = file.name.match(/\.(pdf|epub|doc|docx|txt|mobi|zip|rar)$/i);
+    if (!file.type.includes('pdf') && !file.type.includes('document') && !file.type.includes('epub') && !validExt) {
+      showNotify('Vui lòng chọn file sách định dạng PDF, EPUB, DOCX hoặc TXT!');
+      return;
+    }
+
+    try {
+      const sizeStr = file.size < 1024 * 1024
+        ? `${Math.max(1, Math.round(file.size / 1024))} KB`
+        : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+      const key = `idb:book_${Date.now()}`;
+      await audioStorage.saveAudio(key, file);
+
+      if (file.size < 3.5 * 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result as string;
+          setBookForm(prev => ({
+            ...prev,
+            fileUrl: base64,
+            fileName: file.name,
+            size: sizeStr,
+            title: prev.title?.trim() ? prev.title : file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' '),
+          }));
+          showNotify(`Đã tải file sách "${file.name}" (${sizeStr}) thành công!`);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setBookForm(prev => ({
+          ...prev,
+          fileUrl: key,
+          fileName: file.name,
+          size: sizeStr,
+          title: prev.title?.trim() ? prev.title : file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' '),
+        }));
+        showNotify(`Đã lưu file sách "${file.name}" (${sizeStr}) thành công!`);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải file sách:', err);
+      showNotify('Không thể tải file sách. Vui lòng thử lại!');
     }
   };
 
@@ -531,8 +646,11 @@ export const Admin: React.FC = () => {
       )}
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-card border border-border p-6 rounded-lg flex items-center justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div
+          onClick={() => setActiveTab('poems')}
+          className="bg-card border border-border p-6 rounded-lg flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors"
+        >
           <div>
             <p className="text-xs text-foreground/60 uppercase tracking-wider mb-1 font-bold">Tổng số Thi Ca</p>
             <h3 className="font-serif text-3xl font-bold text-primary">{poems.length} bài thơ</h3>
@@ -540,7 +658,10 @@ export const Admin: React.FC = () => {
           <Feather className="w-8 h-8 text-primary/30" />
         </div>
 
-        <div className="bg-card border border-border p-6 rounded-lg flex items-center justify-between">
+        <div
+          onClick={() => setActiveTab('stories')}
+          className="bg-card border border-border p-6 rounded-lg flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors"
+        >
           <div>
             <p className="text-xs text-foreground/60 uppercase tracking-wider mb-1 font-bold">Cổ Tích & Điển Cố</p>
             <h3 className="font-serif text-3xl font-bold text-primary">{stories.length} câu chuyện</h3>
@@ -548,17 +669,31 @@ export const Admin: React.FC = () => {
           <BookMarked className="w-8 h-8 text-primary/30" />
         </div>
 
-        <div className="bg-card border border-border p-6 rounded-lg flex items-center justify-between">
+        <div
+          onClick={() => setActiveTab('scholars')}
+          className="bg-card border border-border p-6 rounded-lg flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors"
+        >
           <div>
             <p className="text-xs text-foreground/60 uppercase tracking-wider mb-1 font-bold">Danh Nhân</p>
             <h3 className="font-serif text-3xl font-bold text-primary">{scholars.length} bậc hiền tài</h3>
           </div>
           <Users className="w-8 h-8 text-primary/30" />
         </div>
+
+        <div
+          onClick={() => setActiveTab('books')}
+          className="bg-card border border-border p-6 rounded-lg flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors"
+        >
+          <div>
+            <p className="text-xs text-foreground/60 uppercase tracking-wider mb-1 font-bold">Thư Viện Sách</p>
+            <h3 className="font-serif text-3xl font-bold text-primary">{books.length} ấn phẩm</h3>
+          </div>
+          <Library className="w-8 h-8 text-primary/30" />
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border mb-8 gap-4">
+      <div className="flex flex-wrap border-b border-border mb-8 gap-4 sm:gap-6">
         <button
           onClick={() => setActiveTab('poems')}
           className={`pb-3 font-serif text-base font-bold flex items-center gap-2 border-b-2 transition-colors ${
@@ -582,6 +717,14 @@ export const Admin: React.FC = () => {
           }`}
         >
           <Users className="w-4 h-4" /> Danh Nhân ({scholars.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('books')}
+          className={`pb-3 font-serif text-base font-bold flex items-center gap-2 border-b-2 transition-colors ${
+            activeTab === 'books' ? 'border-primary text-primary' : 'border-transparent text-foreground/60 hover:text-foreground'
+          }`}
+        >
+          <Library className="w-4 h-4" /> Thư Viện Sách ({books.length})
         </button>
       </div>
 
@@ -788,6 +931,103 @@ export const Admin: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ----------------- TAB 4: BOOKS (THƯ VIỆN SÁCH) ----------------- */}
+      {activeTab === 'books' && (
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="font-serif text-xl font-bold">Danh Sách Sách & Tài Liệu Thư Viện</h2>
+              <p className="text-xs text-foreground/60 mt-0.5">
+                Quản lý kho sách số hóa, thư tịch cổ, văn bản Nôm và tài liệu PDF/EPUB cho mục Thư Viện
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setFormError('');
+                setBookForm({
+                  title: '',
+                  author: '',
+                  type: 'Thư tịch cổ',
+                  size: '',
+                  img: '/assets/article_1-Bnc_y2PA.jpg',
+                  description: '',
+                  fileUrl: '',
+                  fileName: '',
+                });
+                setBookModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-2.5 rounded hover:bg-primary/90 transition-colors uppercase tracking-wider"
+            >
+              <Plus className="w-4 h-4" /> Tải Sách / Tài Liệu Mới
+            </button>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="divide-y divide-border">
+              {books.map((bk) => (
+                <div key={bk.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
+                    {bk.img ? (
+                      <img src={bk.img} alt={bk.title} className="w-12 h-16 rounded object-cover border border-border shrink-0" />
+                    ) : (
+                      <div className="w-12 h-16 rounded bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-serif font-bold text-lg text-foreground truncate">{bk.title}</h4>
+                        <span className="text-[11px] bg-primary/10 text-primary font-medium px-2 py-0.5 rounded-full">
+                          {bk.type}
+                        </span>
+                      </div>
+                      <p className="text-xs text-foreground/60 font-serif italic mt-0.5">
+                        — {bk.author} {bk.size ? `• Dung lượng: ${bk.size}` : ''}
+                      </p>
+                      {bk.description && (
+                        <p className="text-xs text-foreground/50 line-clamp-1 mt-1">{bk.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {bk.fileUrl ? (
+                          <span className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-medium inline-flex items-center gap-1">
+                            <FileText className="w-3 h-3" /> Đã đính kèm file ({bk.fileName || 'Tài liệu sách'})
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-medium inline-flex items-center gap-1">
+                            Chưa đính kèm file PDF/Link tải
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => {
+                        setFormError('');
+                        setBookForm(bk);
+                        setBookModalOpen(true);
+                      }}
+                      className="p-2 hover:bg-muted rounded text-foreground/70 hover:text-primary transition-colors"
+                      title="Chỉnh sửa / Tải file sách"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBook(bk.id, bk.title)}
+                      className="p-2 hover:bg-red-50 rounded text-foreground/70 hover:text-red-600 transition-colors"
+                      title="Xóa sách"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -1430,6 +1670,200 @@ export const Admin: React.FC = () => {
                   className="px-6 py-2 text-xs uppercase tracking-wider bg-primary text-primary-foreground font-semibold rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isSaving ? 'Đang lưu...' : 'Lưu Danh Nhân'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* MODAL: ĐĂNG / SỬA SÁCH & TÀI LIỆU THƯ VIỆN */}
+      {/* ------------------------------------------------------------- */}
+      {bookModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-card border border-border rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="px-6 py-4 border-b border-border bg-background flex items-center justify-between">
+              <h3 className="font-serif font-bold text-xl text-foreground flex items-center gap-2">
+                <Library className="w-5 h-5 text-primary" />
+                {bookForm.id ? 'Chỉnh Sửa Sách & Tài Liệu' : 'Tải Sách / Tài Liệu Lên Thư Viện'}
+              </h3>
+              <button onClick={() => setBookModalOpen(false)} className="text-foreground/60 hover:text-foreground">✕</button>
+            </div>
+
+            <form onSubmit={handleSaveBook} className="p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase mb-1">Tên sách / Tài liệu *</label>
+                  <input
+                    type="text"
+                    required
+                    value={bookForm.title || ''}
+                    onChange={(e) => {
+                      const newTitle = e.target.value;
+                      const isAutoSync = !bookForm.slug || bookForm.slug === toSlug(bookForm.title || '');
+                      setBookForm(prev => ({
+                        ...prev,
+                        title: newTitle,
+                        ...(isAutoSync ? { slug: toSlug(newTitle) } : {})
+                      }));
+                    }}
+                    placeholder="VD: Truyện Kiều (Bản Nôm 1871)"
+                    className="w-full bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase mb-1">Tác giả / Dịch giả *</label>
+                  <input
+                    type="text"
+                    required
+                    value={bookForm.author || ''}
+                    onChange={(e) => setBookForm({ ...bookForm, author: e.target.value })}
+                    placeholder="VD: Nguyễn Du"
+                    className="w-full bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase mb-1">Phân loại / Thể loại</label>
+                  <select
+                    value={bookForm.type || 'Thư tịch cổ'}
+                    onChange={(e) => setBookForm({ ...bookForm, type: e.target.value })}
+                    className="w-full bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
+                  >
+                    <option value="Thư tịch cổ">Thư tịch cổ</option>
+                    <option value="Văn bản cổ">Văn bản cổ (Hán Nôm)</option>
+                    <option value="Thi tập">Thi tập</option>
+                    <option value="Kinh điển">Kinh điển</option>
+                    <option value="Triết học">Triết học</option>
+                    <option value="Nghiên cứu văn học">Nghiên cứu văn học</option>
+                    <option value="Lịch sử & Văn hóa">Lịch sử & Văn hóa</option>
+                    <option value="Tài liệu khác">Tài liệu khác</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase mb-1">Dung lượng (Tự động hoặc nhập tay)</label>
+                  <input
+                    type="text"
+                    value={bookForm.size || ''}
+                    onChange={(e) => setBookForm({ ...bookForm, size: e.target.value })}
+                    placeholder="VD: 15 MB (tự điền khi chọn file)"
+                    className="w-full bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              {/* Upload Book File PDF / EPUB / DOCX or Direct Link */}
+              <div className="p-4 bg-muted/40 border border-primary/25 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                    <FileText className="w-4 h-4" /> Tập Tin Sách Đính Kèm (PDF, EPUB, DOCX) Hoặc Link Tải
+                  </div>
+                  {bookForm.fileUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setBookForm({ ...bookForm, fileUrl: '', fileName: '' })}
+                      className="text-[11px] text-red-600 hover:underline font-normal"
+                    >
+                      ✕ Gỡ bỏ file
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-foreground/60 leading-relaxed">
+                  Bạn có thể <strong>tải trực tiếp file sách (PDF, EPUB, DOCX...)</strong> từ máy tính lên hệ thống, hoặc dán đường dẫn liên kết (Google Drive, Dropbox, OneDrive, link PDF trực tiếp).
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <input
+                    type="text"
+                    value={bookForm.fileUrl?.startsWith('data:') ? `[Đã tải lên file: ${bookForm.fileName || 'Tài liệu PDF'}]` : (bookForm.fileUrl || '')}
+                    onChange={(e) => {
+                      if (!e.target.value.startsWith('[Đã tải lên file:')) {
+                        setBookForm({ ...bookForm, fileUrl: e.target.value });
+                      }
+                    }}
+                    placeholder="Dán link tải sách (https://drive.google.com/... hoặc https://.../sach.pdf)..."
+                    className="flex-1 bg-background border border-border rounded px-3 py-2 text-xs focus:outline-none focus:border-primary"
+                  />
+                  <label className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-xs">
+                    <Upload className="w-3.5 h-3.5" /> Chọn File Sách (PDF/EPUB)
+                    <input
+                      type="file"
+                      accept=".pdf,.epub,.doc,.docx,.txt,application/pdf,application/epub+zip"
+                      className="hidden"
+                      onChange={handleBookFileChange}
+                    />
+                  </label>
+                </div>
+
+                {bookForm.fileName && (
+                  <div className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded flex items-center justify-between">
+                    <span>📄 Tên file: <strong>{bookForm.fileName}</strong> ({bookForm.size})</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cover Image Upload */}
+              <div>
+                <label className="block text-xs font-bold uppercase mb-1">Ảnh bìa sách (Tùy chọn)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={bookForm.img || ''}
+                    onChange={(e) => setBookForm({ ...bookForm, img: e.target.value })}
+                    placeholder="Đường dẫn ảnh bìa hoặc tải lên từ máy tính..."
+                    className="flex-1 bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
+                  />
+                  <label className="cursor-pointer bg-muted hover:bg-muted/80 px-3 py-2 rounded text-xs font-medium flex items-center gap-1.5 text-foreground shrink-0">
+                    <Upload className="w-3.5 h-3.5" /> Tải ảnh bìa
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleImageFileChange(e, 'book')}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-bold uppercase mb-1">Mô tả / Giới thiệu tóm tắt cuốn sách</label>
+                <textarea
+                  rows={3}
+                  value={bookForm.description || ''}
+                  onChange={(e) => setBookForm({ ...bookForm, description: e.target.value })}
+                  placeholder="Giới thiệu nội dung, giá trị văn bản, năm xuất bản hoặc chú giải của cuốn sách..."
+                  className="w-full bg-background border border-border rounded p-3 text-sm focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              {formError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold rounded flex items-center gap-2">
+                  <span>⚠️</span> <span>{formError}</span>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-border flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBookModalOpen(false);
+                    setFormError('');
+                  }}
+                  className="px-4 py-2 text-xs uppercase tracking-wider bg-muted rounded hover:bg-muted/80"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-6 py-2 text-xs uppercase tracking-wider bg-primary text-primary-foreground font-semibold rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isSaving ? 'Đang lưu...' : 'Lưu Vào Thư Viện'}
                 </button>
               </div>
             </form>
