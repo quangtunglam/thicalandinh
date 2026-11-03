@@ -99,7 +99,7 @@ export const apiService = {
       }
       return {
         success: false,
-        error: !validUser ? 'Tài khoản quản trị là: admin' : 'Mật khẩu quản trị không đúng (Mặc định: thicalandinh2026)'
+        error: 'Sai tài khoản hoặc mật khẩu quản trị!'
       };
     }
   },

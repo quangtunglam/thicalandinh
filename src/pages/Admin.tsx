@@ -114,7 +114,7 @@ const compressBase64IfNeeded = async (base64Str: string): Promise<string> => {
 
 export const Admin: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(apiService.isAdminLoggedIn());
-  const [usernameInput, setUsernameInput] = useState('admin');
+  const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState<'poems' | 'stories' | 'scholars' | 'books'>('poems');
@@ -558,7 +558,7 @@ export const Admin: React.FC = () => {
                 type="text"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
-                placeholder="Tên tài khoản (mặc định: admin)..."
+                placeholder="Nhập tên tài khoản quản trị..."
                 required
                 className="w-full bg-background border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors font-sans"
               />
@@ -576,9 +576,6 @@ export const Admin: React.FC = () => {
                 required
                 className="w-full bg-background border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors font-sans"
               />
-              <p className="text-[11px] text-foreground/50 mt-1.5 italic">
-                * Tài khoản mặc định: <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-primary">admin</code> / Mật khẩu: <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-primary">thicalandinh2026</code>
-              </p>
             </div>
 
             {loginError && (
