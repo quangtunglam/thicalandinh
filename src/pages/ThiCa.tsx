@@ -159,7 +159,6 @@ export const ThiCa: React.FC<ThiCaProps> = ({ onSelectPoem }) => {
                   <span className="text-primary font-medium flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                     <BookOpen className="w-3.5 h-3.5" /> {embedUrl ? 'Nghe ngâm thơ & Đọc bài' : 'Đọc & Bình phẩm'}
                   </span>
-                  <span className="text-foreground/50">{poem.verses.length} câu</span>
                 </div>
               </div>
             </div>
