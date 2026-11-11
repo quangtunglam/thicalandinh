@@ -187,6 +187,8 @@ export const Admin: React.FC = () => {
     fileUrl: '',
     fileName: '',
   });
+  const [pendingBookFile, setPendingBookFile] = useState<File | null>(null);
+  const [bookUploadProgress, setBookUploadProgress] = useState<number | null>(null);
 
   const loadData = async () => {
     const [p, s, sc, b] = await Promise.all([
@@ -199,6 +201,25 @@ export const Admin: React.FC = () => {
     setStories(s);
     setScholars(sc);
     setBooks(b);
+
+    // Auto-sync any legacy idb:book_ files if they exist in this browser's IndexedDB
+    for (const bk of b) {
+      if (bk.fileUrl && bk.fileUrl.startsWith('idb:book_')) {
+        audioStorage.getRawBlob(bk.fileUrl).then(async (blob) => {
+          if (blob && blob.size > 0) {
+            try {
+              const token = apiService.getAuthToken() || 'thicalandinh2026';
+              const chunkedUrl = await audioStorage.uploadBookInChunks(bk.id, blob, token);
+              const updatedBook: Book = { ...bk, fileUrl: chunkedUrl };
+              await apiService.saveBook(updatedBook);
+              setBooks(prev => prev.map(item => item.id === bk.id ? updatedBook : item));
+            } catch (e) {
+              console.warn('Auto-sync book failed:', e);
+            }
+          }
+        });
+      }
+    }
   };
 
   useEffect(() => {
@@ -358,10 +379,26 @@ export const Admin: React.FC = () => {
 
     try {
       setIsSaving(true);
+      const bookId = bookForm.id || 'book-' + Date.now();
+      let finalFileUrl = bookForm.fileUrl?.trim() || '';
+
+      // If user selected a file that hasn't finished uploading to server chunks yet, upload now
+      if (pendingBookFile) {
+        const token = apiService.getAuthToken() || 'thicalandinh2026';
+        setBookUploadProgress(1);
+        finalFileUrl = await audioStorage.uploadBookInChunks(
+          bookId,
+          pendingBookFile,
+          token,
+          (pct) => setBookUploadProgress(pct)
+        );
+        setPendingBookFile(null);
+      }
+
       const finalImg = bookForm.img ? await compressBase64IfNeeded(bookForm.img) : '/assets/article_1-Bnc_y2PA.jpg';
 
       const newBook: Book = {
-        id: bookForm.id || 'book-' + Date.now(),
+        id: bookId,
         slug: (bookForm.slug && bookForm.slug.trim()) ? toSlug(bookForm.slug.trim()) : toSlug(bookForm.title || ''),
         title: bookForm.title.trim(),
         author: bookForm.author.trim(),
@@ -369,12 +406,13 @@ export const Admin: React.FC = () => {
         size: bookForm.size?.trim() || '10 MB',
         img: finalImg,
         description: bookForm.description?.trim() || '',
-        fileUrl: bookForm.fileUrl?.trim() || '',
+        fileUrl: finalFileUrl,
         fileName: bookForm.fileName?.trim() || `${toSlug(bookForm.title.trim()) || 'tai-lieu'}.pdf`,
       };
 
       await apiService.saveBook(newBook);
       await loadData();
+      setBookUploadProgress(null);
       setBookModalOpen(false);
       showNotify(`Đã lưu sách "${newBook.title}" vào Thư viện thành công!`);
     } catch (err: any) {
@@ -462,36 +500,39 @@ export const Admin: React.FC = () => {
         ? `${Math.max(1, Math.round(file.size / 1024))} KB`
         : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
 
-      const key = `idb:book_${Date.now()}`;
-      await audioStorage.saveAudio(key, file);
+      const targetBookId = bookForm.id || 'book-' + Date.now();
+      setPendingBookFile(file);
+      setBookForm(prev => ({
+        ...prev,
+        id: targetBookId,
+        fileName: file.name,
+        size: sizeStr,
+        title: prev.title?.trim() ? prev.title : file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' '),
+      }));
 
-      if (file.size < 3.5 * 1024 * 1024) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result as string;
-          setBookForm(prev => ({
-            ...prev,
-            fileUrl: base64,
-            fileName: file.name,
-            size: sizeStr,
-            title: prev.title?.trim() ? prev.title : file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' '),
-          }));
-          showNotify(`Đã tải file sách "${file.name}" (${sizeStr}) thành công!`);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setBookForm(prev => ({
-          ...prev,
-          fileUrl: key,
-          fileName: file.name,
-          size: sizeStr,
-          title: prev.title?.trim() ? prev.title : file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' '),
-        }));
-        showNotify(`Đã lưu file sách "${file.name}" (${sizeStr}) thành công!`);
-      }
-    } catch (err) {
-      console.error('Lỗi khi tải file sách:', err);
-      showNotify('Không thể tải file sách. Vui lòng thử lại!');
+      // Immediately start chunked upload to server so file is persisted in cloud DB
+      const token = apiService.getAuthToken() || 'thicalandinh2026';
+      setBookUploadProgress(1);
+      const chunkedUrl = await audioStorage.uploadBookInChunks(
+        targetBookId,
+        file,
+        token,
+        (pct) => setBookUploadProgress(pct)
+      );
+
+      setPendingBookFile(null);
+      setBookForm(prev => ({
+        ...prev,
+        id: targetBookId,
+        fileUrl: chunkedUrl,
+        fileName: file.name,
+        size: sizeStr,
+      }));
+      showNotify(`Đã tải file sách "${file.name}" (${sizeStr}) lên máy chủ thành công!`);
+    } catch (err: any) {
+      console.error('Lỗi khi tải file sách lên máy chủ:', err);
+      setBookUploadProgress(null);
+      setFormError('Không thể tải file lên máy chủ: ' + (err?.message || 'Vui lòng thử lại hoặc dùng link Google Drive'));
     }
   };
 
@@ -945,6 +986,8 @@ export const Admin: React.FC = () => {
             <button
               onClick={() => {
                 setFormError('');
+                setPendingBookFile(null);
+                setBookUploadProgress(null);
                 setBookForm({
                   title: '',
                   author: '',
@@ -988,10 +1031,14 @@ export const Admin: React.FC = () => {
                       {bk.description && (
                         <p className="text-xs text-foreground/50 line-clamp-1 mt-1">{bk.description}</p>
                       )}
-                      <div className="flex items-center gap-2 mt-1.5">
-                        {bk.fileUrl ? (
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {bk.fileUrl?.startsWith('idb:book_') ? (
+                          <span className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-semibold inline-flex items-center gap-1">
+                            ⚠️ File chưa đồng bộ lên máy chủ ({bk.fileName || 'PDF'}) — Bấm Sửa ✏️ và chọn lại file PDF để tải lên đám mây
+                          </span>
+                        ) : bk.fileUrl ? (
                           <span className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-medium inline-flex items-center gap-1">
-                            <FileText className="w-3 h-3" /> Đã đính kèm file ({bk.fileName || 'Tài liệu sách'})
+                            <FileText className="w-3 h-3" /> Đã lưu trên đám mây ({bk.fileName || 'Tài liệu sách'})
                           </span>
                         ) : (
                           <span className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-medium inline-flex items-center gap-1">
@@ -1006,6 +1053,8 @@ export const Admin: React.FC = () => {
                     <button
                       onClick={() => {
                         setFormError('');
+                        setPendingBookFile(null);
+                        setBookUploadProgress(null);
                         setBookForm(bk);
                         setBookModalOpen(true);
                       }}
@@ -1776,9 +1825,13 @@ export const Admin: React.FC = () => {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <input
                     type="text"
-                    value={bookForm.fileUrl?.startsWith('data:') ? `[Đã tải lên file: ${bookForm.fileName || 'Tài liệu PDF'}]` : (bookForm.fileUrl || '')}
+                    value={
+                      bookForm.fileUrl?.startsWith('data:') || bookForm.fileUrl?.startsWith('chunked:') || bookForm.fileUrl?.startsWith('idb:book_')
+                        ? `[Tệp tin: ${bookForm.fileName || 'Tài liệu PDF'}]`
+                        : (bookForm.fileUrl || '')
+                    }
                     onChange={(e) => {
-                      if (!e.target.value.startsWith('[Đã tải lên file:')) {
+                      if (!e.target.value.startsWith('[Tệp tin:')) {
                         setBookForm({ ...bookForm, fileUrl: e.target.value });
                       }
                     }}
@@ -1796,7 +1849,32 @@ export const Admin: React.FC = () => {
                   </label>
                 </div>
 
-                {bookForm.fileName && (
+                {bookUploadProgress !== null && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-xs font-semibold text-primary">
+                      <span>
+                        {bookUploadProgress < 100
+                          ? `☁️ Đang tải file sách lên máy chủ đám mây (${bookUploadProgress}%)...`
+                          : '✅ Đã tải 100% file sách lên máy chủ đám mây!'}
+                      </span>
+                      <span>{bookUploadProgress}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-border rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${bookUploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {bookForm.fileUrl?.startsWith('idb:book_') && bookUploadProgress === null && (
+                  <div className="text-xs text-amber-700 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-3 py-2 rounded">
+                    ⚠️ File <strong>{bookForm.fileName}</strong> trước đó chưa được đồng bộ lên đám mây. Vui lòng bấm nút <strong>"Chọn File Sách (PDF/EPUB)"</strong> ở trên và chọn lại file này để tải lên máy chủ!
+                  </div>
+                )}
+
+                {bookForm.fileName && !bookForm.fileUrl?.startsWith('idb:book_') && (
                   <div className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded flex items-center justify-between">
                     <span>📄 Tên file: <strong>{bookForm.fileName}</strong> ({bookForm.size})</span>
                   </div>

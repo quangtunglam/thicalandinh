@@ -85,6 +85,16 @@ export async function initDatabaseSchema() {
       file_name VARCHAR(255),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS book_chunks (
+      book_id VARCHAR(255) NOT NULL,
+      chunk_index INT NOT NULL,
+      total_chunks INT NOT NULL,
+      mime_type VARCHAR(100) DEFAULT 'application/pdf',
+      chunk_data TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (book_id, chunk_index)
+    );
   `;
 
   await db.query(createTablesSql);

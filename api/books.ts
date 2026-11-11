@@ -117,6 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { id } = req.query;
       if (db && id) {
         await db.query('DELETE FROM library WHERE id = $1', [id]);
+        await db.query('DELETE FROM book_chunks WHERE book_id = $1', [id]);
       }
       return res.status(200).json({ success: true, message: 'Đã xóa sách khỏi thư viện!' });
     }
