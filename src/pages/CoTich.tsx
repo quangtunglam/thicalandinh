@@ -20,7 +20,7 @@ export const CoTich: React.FC = () => {
           <BookMarked className="w-3.5 h-3.5" /> Điển Cố & Truyện Xưa
         </div>
         <h1 className="font-serif text-4xl md:text-5xl font-bold mb-4 text-foreground">
-          Kho Tàng Điển Cố
+          Kho Tàng Cổ Tích & Điển Cố
         </h1>
         <p className="font-serif text-foreground/70 text-lg leading-relaxed">
           Những câu chuyện xưa tích cũ ẩn chứa đạo lý làm người, tinh thần trượng nghĩa và bài học nhân sinh sâu sắc.

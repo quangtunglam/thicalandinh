@@ -232,7 +232,7 @@ export const apiService = {
             slug: s.slug || s.id,
             title: s.title,
             subtitle: s.subtitle || '',
-            theme: s.theme || 'Điển cố văn học',
+            theme: (s.theme === 'Điển cố văn học' || s.theme === 'Điển cổ') ? 'Điển cố' : (s.theme || 'Điển cố'),
             img: s.img || '/assets/story_scholars-CtpupIEr.jpg',
             summary: s.summary || '',
             content: Array.isArray(s.content) ? s.content : (typeof s.content === 'string' ? JSON.parse(s.content) : []),

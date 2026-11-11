@@ -192,7 +192,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
           {filteredStories.length > 0 && (
             <div>
               <h3 className="text-xs font-bold text-primary uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                <BookMarked className="w-3.5 h-3.5" /> Điển Cố ({filteredStories.length})
+                <BookMarked className="w-3.5 h-3.5" /> Cổ Tích & Điển Cố ({filteredStories.length})
               </h3>
               <div className="space-y-1">
                 {filteredStories.map((story) => (

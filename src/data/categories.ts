@@ -35,10 +35,10 @@ export const CATEGORIES: Category[] = [
   {
     id: "co-tich",
     href: "/co-tich",
-    label: "ĐIỂN CỐ",
+    label: "CỔ TÍCH & ĐIỂN CỐ",
     sub: "Kho tàng truyện xưa\nđiển cố",
     img: "/assets/cat_co_tich-B5jJYxkR.png",
-    description: "Lắng nghe những câu chuyện xưa tích cũ, những điển cố văn học ẩn chứa bài học sâu sắc của tiền nhân."
+    description: "Lắng nghe những câu chuyện xưa tích cũ, những điển cố sâu sắc của tiền nhân."
   },
   {
     id: "thu-vien",

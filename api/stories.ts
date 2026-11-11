@@ -96,7 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             slug,
             body.title,
             body.subtitle || '',
-            body.theme || 'Điển cố văn học',
+            body.theme || 'Điển cố',
             body.img || '/assets/story_scholars-CtpupIEr.jpg',
             body.summary || '',
             JSON.stringify(body.content || []),

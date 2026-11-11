@@ -13,7 +13,7 @@ export const NAV_LINKS = [
   { href: '/thi-ca', label: 'Thi Ca' },
   { href: '/van-hoa', label: 'Văn Hóa' },
   { href: '/danh-nhan', label: 'Danh Nhân' },
-  { href: '/co-tich', label: 'Điển Cố' },
+  { href: '/co-tich', label: 'Cổ Tích & Điển Cố' },
   { href: '/thu-vien', label: 'Thư Viện' },
   { href: '/gioi-thieu', label: 'Giới Thiệu' },
 ];
