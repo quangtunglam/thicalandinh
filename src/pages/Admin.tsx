@@ -1223,11 +1223,11 @@ export const Admin: React.FC = () => {
                 </div>
               </div>
 
-              {/* YouTube Embed / Recitation Video */}
+              {/* YouTube & Gan Jing World Embed / Recitation Video */}
               <div className="p-4 bg-muted/40 border border-primary/25 rounded-lg space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                    <Youtube className="w-4 h-4 text-red-600" /> Nhúng Video Ngâm Thơ Từ YouTube (Embed Code Hoặc Link)
+                    <Youtube className="w-4 h-4 text-red-600" /> Nhúng Video Ngâm Thơ Từ YouTube / Gan Jing World (Embed Code Hoặc Link)
                   </label>
                   {poemForm.youtubeUrl && (
                     <button
@@ -1240,19 +1240,19 @@ export const Admin: React.FC = () => {
                   )}
                 </div>
                 <p className="text-[11px] text-foreground/60 leading-relaxed">
-                  Dán trực tiếp mã nhúng <code>&lt;iframe ...&gt;&lt;/iframe&gt;</code> lấy từ YouTube (bấm <em>Chia sẻ &rarr; Nhúng</em>) hoặc dán đường dẫn video YouTube (<code>https://www.youtube.com/watch?v=...</code> hoặc <code>https://youtu.be/...</code>).
+                  Dán trực tiếp mã nhúng <code>&lt;iframe ...&gt;&lt;/iframe&gt;</code> hoặc dán đường dẫn video từ <strong>YouTube</strong> (<code>https://www.youtube.com/watch?v=...</code>) hoặc <strong>Gan Jing World</strong> (<code>https://www.ganjingworld.com/video/...</code>).
                 </p>
                 <textarea
                   rows={2}
                   value={poemForm.youtubeUrl || ''}
                   onChange={(e) => setPoemForm({ ...poemForm, youtubeUrl: e.target.value })}
-                  placeholder='Dán mã <iframe src="https://www.youtube.com/embed/..." ...></iframe> hoặc link YouTube vào đây...'
+                  placeholder='Dán link YouTube, link Gan Jing World (https://www.ganjingworld.com/video/...) hoặc mã <iframe ...></iframe> vào đây...'
                   className="w-full bg-background border border-border rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-primary"
                 />
                 {extractYoutubeEmbedUrl(poemForm.youtubeUrl) && (
                   <div className="pt-1">
                     <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold mb-1.5">
-                      ✓ Xem trước trình phát ngâm thơ YouTube:
+                      ✓ Xem trước trình phát video ngâm thơ:
                     </p>
                     <div className="aspect-video w-full max-w-md rounded-lg overflow-hidden border border-border shadow-sm bg-black">
                       <iframe
