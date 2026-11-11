@@ -69,16 +69,18 @@ body {
 /* Story Rich Content & WYSIWYG Styling */
 .story-rich-content {
   word-break: break-word;
-  white-space: pre-line;
+  line-height: 1.85;
 }
 
-.story-rich-content p {
+.story-rich-content p,
+.story-rich-content > div {
   margin-bottom: 1.25rem;
   line-height: 1.85;
   white-space: pre-line;
 }
 
-.story-rich-content p:last-child {
+.story-rich-content p:last-child,
+.story-rich-content > div:last-child {
   margin-bottom: 0;
 }
 
@@ -110,15 +112,21 @@ body {
 .story-rich-content ul {
   list-style-type: disc;
   padding-left: 1.75rem;
-  margin: 0.75rem 0;
+  margin: 0.75rem 0 1.25rem 0;
 }
 
 .story-rich-content ol {
   list-style-type: decimal;
   padding-left: 1.75rem;
-  margin: 0.75rem 0;
+  margin: 0.75rem 0 1.25rem 0;
 }
 
 .story-rich-content li {
   margin-bottom: 0.35rem;
+}
+
+.story-rich-content hr {
+  border: 0;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1.5rem 0;
 }

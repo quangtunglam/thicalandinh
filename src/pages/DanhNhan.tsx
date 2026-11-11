@@ -104,7 +104,7 @@ export const DanhNhan: React.FC = () => {
 
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-2">Tiểu sử & Cuộc đời</h4>
-                <p className="text-foreground/80 leading-relaxed">{activeScholar.bio}</p>
+                <p className="text-foreground/80 leading-relaxed whitespace-pre-line">{activeScholar.bio}</p>
               </div>
 
               <div className="bg-background/80 p-5 rounded border border-border/60">

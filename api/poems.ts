@@ -80,6 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const slug = body.slug || id;
 
       if (db) {
+        await db.query('DELETE FROM poems WHERE slug = $1 AND id <> $2', [slug, id]);
         await db.query(
           `INSERT INTO poems (id, slug, title, author, category, period, img, featured_quote, verses, original_text, translation, explanation, tags, youtube_url)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)

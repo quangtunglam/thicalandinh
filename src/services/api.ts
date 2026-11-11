@@ -52,20 +52,29 @@ function cleanStories(list: Story[]): Story[] {
 
   const result: Story[] = [];
   for (const s of filtered) {
-    const normTitle = normalize(s.title);
+    const cleanedContent = Array.isArray(s.content)
+      ? s.content.filter((p) => {
+          const stripped = (p || '')
+            .replace(/&lt;\/?br\s*\/?&gt;/gi, '')
+            .replace(/<\/?(p|div|span|br)[^>]*>/gi, '')
+            .replace(/&nbsp;|\u00A0/gi, ' ')
+            .trim();
+          return stripped.length > 0 || /<(img|hr|audio|iframe|table)/i.test(p || '');
+        })
+      : [];
+    const normalizedStory: Story = { ...s, content: cleanedContent };
+    const normTitle = normalize(normalizedStory.title);
     const existingIdx = result.findIndex(
-      r => r.id === s.id || r.slug === s.slug || (normTitle && normalize(r.title) === normTitle)
+      r => r.id === normalizedStory.id || r.slug === normalizedStory.slug || (normTitle && normalize(r.title) === normTitle)
     );
     if (existingIdx === -1) {
-      result.push(s);
+      result.push(normalizedStory);
     } else {
       const existing = result[existingIdx];
-      const sHasCustomImg = s.img && !s.img.includes('story_scholars');
+      const sHasCustomImg = normalizedStory.img && !normalizedStory.img.includes('story_scholars');
       const existingHasCustomImg = existing.img && !existing.img.includes('story_scholars');
       if (sHasCustomImg && !existingHasCustomImg) {
-        result[existingIdx] = s;
-      } else if ((s.content?.length || 0) > (existing.content?.length || 0)) {
-        result[existingIdx] = s;
+        result[existingIdx] = normalizedStory;
       }
     }
   }

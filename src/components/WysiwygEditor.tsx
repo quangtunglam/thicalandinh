@@ -30,8 +30,79 @@ export interface WysiwygEditorProps {
   minHeight?: string;
 }
 
+const BLOCK_TAGS = new Set([
+  'P',
+  'DIV',
+  'H1',
+  'H2',
+  'H3',
+  'H4',
+  'H5',
+  'H6',
+  'BLOCKQUOTE',
+  'UL',
+  'OL',
+  'LI',
+  'TABLE',
+  'HR',
+  'PRE',
+  'SECTION',
+  'ARTICLE',
+  'HEADER',
+  'FOOTER',
+]);
+
+// Check if an HTML string is just an empty spacer like <div><br></div> or <p><br></p>
+export function isEmptyHtmlSpacer(html: string): boolean {
+  if (!html) return true;
+  const stripped = html
+    .replace(/&lt;\/?br\s*\/?&gt;/gi, '')
+    .replace(/<\/?(p|div|span|br|b|strong|i|em|u|s|font)[^>]*>/gi, '')
+    .replace(/&nbsp;|\u00A0/gi, ' ')
+    .trim();
+  if (stripped.length > 0) return false;
+  return !/<(img|hr|audio|iframe|table)/i.test(html);
+}
+
+// Safely clean junk browser spans using DOM traversal (never breaks nested spans)
+function cleanDomSpans(root: HTMLElement): void {
+  const spans = Array.from(root.querySelectorAll('span')).reverse();
+  for (const span of spans) {
+    const style = span.getAttribute('style') || '';
+    if (style) {
+      // Remove default browser-computed styles that shouldn't be hardcoded
+      if (span.style.fontSize === '1rem') {
+        span.style.removeProperty('font-size');
+      }
+      const c = span.style.color.replace(/\s+/g, '');
+      if (c === 'rgb(44,40,38)' || c === 'rgb(36,28,21)' || c === '#241c15') {
+        span.style.removeProperty('color');
+      }
+      if (span.style.backgroundColor === 'transparent' || span.style.backgroundColor === 'rgba(0, 0, 0, 0)') {
+        span.style.removeProperty('background-color');
+      }
+    }
+
+    const remainingStyle = (span.getAttribute('style') || '').trim();
+    if (!remainingStyle) {
+      span.removeAttribute('style');
+    }
+
+    // If span has no attributes left, unwrap it safely
+    if (span.attributes.length === 0) {
+      const parent = span.parentNode;
+      if (parent) {
+        while (span.firstChild) {
+          parent.insertBefore(span.firstChild, span);
+        }
+        parent.removeChild(span);
+      }
+    }
+  }
+}
+
 // Convert incoming value (array of paragraphs or string) into HTML for contentEditable
-function toHtml(val: string[] | string): string {
+export function toHtml(val: string[] | string): string {
   if (Array.isArray(val)) {
     return val
       .map((p) => {
@@ -41,6 +112,24 @@ function toHtml(val: string[] | string): string {
         trimmed = trimmed
           .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br>')
           .replace(/<\/?br\s*\/?>/gi, '<br>');
+
+        // Skip empty <div><br></div> spacers so they don't stack extra gaps
+        if (isEmptyHtmlSpacer(trimmed)) {
+          return '';
+        }
+
+        // Convert top-level <div>...</div> to <p>...</p> so editor and public view have identical paragraph margins
+        if (/^<div(\s[^>]*)?>[\s\S]*<\/div>$/i.test(trimmed)) {
+          const temp = document.createElement('div');
+          temp.innerHTML = trimmed;
+          if (temp.children.length === 1 && temp.children[0].tagName === 'DIV') {
+            const divEl = temp.children[0] as HTMLElement;
+            if (!divEl.querySelector('p, div, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, table, hr')) {
+              const styleAttr = divEl.getAttribute('style') ? ` style="${divEl.getAttribute('style')}"` : '';
+              return `<p${styleAttr}>${divEl.innerHTML}</p>`;
+            }
+          }
+        }
 
         if (/^<(p|div|h[1-6]|blockquote|ul|ol|table|hr)/i.test(trimmed)) {
           return trimmed;
@@ -55,47 +144,202 @@ function toHtml(val: string[] | string): string {
     .replace(/<\/?br\s*\/?>/gi, '<br>');
 }
 
-// Clean junk spans created by browser or copy-paste
-function cleanJunkSpans(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<span style="[^"]*font-size:\s*1rem;?[^"]*">(.*?)<\/span>/gi, '$1')
-    .replace(/<span style="[^"]*color:\s*rgb\(44,\s*40,\s*38\);?[^"]*">(.*?)<\/span>/gi, '$1')
-    .replace(/<span style="">(.*?)<\/span>/gi, '$1')
-    .replace(/<span>(.*?)<\/span>/gi, '$1');
-}
-
-// Convert contentEditable HTML into an array of clean paragraphs
-function toParagraphs(html: string): string[] {
+// Convert contentEditable HTML into an array of clean paragraphs without losing any root text nodes
+export function toParagraphs(html: string): string[] {
   if (!html || !html.trim()) return [];
 
-  const cleaned = cleanJunkSpans(html);
+  const normalizedHtml = html
+    .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br>')
+    .replace(/<\/?br\s*\/?>/gi, '<br>');
+
   const temp = document.createElement('div');
-  temp.innerHTML = cleaned;
+  temp.innerHTML = normalizedHtml;
+  cleanDomSpans(temp);
 
   const result: string[] = [];
+  let inlineBuffer: string[] = [];
 
-  // If top-level contains block elements
-  if (temp.children.length > 0) {
-    for (let i = 0; i < temp.children.length; i++) {
-      const child = temp.children[i];
-      const text = child.textContent?.trim();
-      const childHtml = child.outerHTML?.trim();
-      if (childHtml && (text || child.querySelector('img, hr, audio, br'))) {
-        result.push(cleanJunkSpans(childHtml));
+  const pushCleanParagraph = (rawContent: string, styleAttr = '') => {
+    // Split on 2 or more consecutive <br> tags into separate paragraphs
+    const parts = rawContent.split(/(?:<br\s*\/?>\s*){2,}/i);
+    for (const part of parts) {
+      const cleanedPart = part
+        .replace(/^(?:<br\s*\/?>|\s)+/i, '')
+        .replace(/(?:<br\s*\/?>|\s)+$/i, '')
+        .trim();
+      if (!cleanedPart) continue;
+      if (isEmptyHtmlSpacer(cleanedPart)) continue;
+      result.push(`<p${styleAttr}>${cleanedPart}</p>`);
+    }
+  };
+
+  const flushInlineBuffer = () => {
+    if (inlineBuffer.length === 0) return;
+    const combined = inlineBuffer.join('').trim();
+    inlineBuffer = [];
+    if (!combined) return;
+    pushCleanParagraph(combined);
+  };
+
+  const processNodeList = (nodes: Node[], inheritedStyle = '') => {
+    for (const node of nodes) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent || '';
+        if (text) {
+          const esc = document.createElement('span');
+          esc.textContent = text;
+          inlineBuffer.push(esc.innerHTML);
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        const tag = el.tagName.toUpperCase();
+
+        if (tag === 'BR') {
+          inlineBuffer.push('<br>');
+          continue;
+        }
+
+        // If an inline element wraps block elements (e.g. from Ctrl+A then changing font size/family),
+        // flush inline buffer and process its children with the inline element's style
+        if (!BLOCK_TAGS.has(tag)) {
+          const hasNestedBlock = Array.from(el.querySelectorAll('*')).some((child) =>
+            BLOCK_TAGS.has(child.tagName.toUpperCase())
+          );
+          if (hasNestedBlock) {
+            flushInlineBuffer();
+            const inlineStyle = el.getAttribute('style') || '';
+            const mergedStyle = [inheritedStyle, inlineStyle].filter(Boolean).join('; ');
+            processNodeList(Array.from(el.childNodes), mergedStyle);
+            flushInlineBuffer();
+          } else {
+            inlineBuffer.push(el.outerHTML);
+          }
+          continue;
+        }
+
+        // It is a block element: first flush any preceding top-level text/inline nodes!
+        flushInlineBuffer();
+
+        if (tag === 'HR') {
+          result.push('<hr>');
+          continue;
+        }
+
+        if (tag === 'UL' || tag === 'OL' || tag === 'BLOCKQUOTE' || tag === 'TABLE' || /^H[1-6]$/.test(tag)) {
+          const text = (el.textContent || '').replace(/\u00A0/g, ' ').trim();
+          if (text || el.querySelector('img, hr, audio, iframe')) {
+            if (inheritedStyle && !el.getAttribute('style')) {
+              el.setAttribute('style', inheritedStyle);
+            }
+            result.push(el.outerHTML.trim());
+          }
+          continue;
+        }
+
+        // For P, DIV, SECTION, ARTICLE:
+        const hasChildBlocks = Array.from(el.children).some((c) =>
+          BLOCK_TAGS.has(c.tagName.toUpperCase())
+        );
+        const ownStyle = el.getAttribute('style') || '';
+        const alignAttr = el.getAttribute('align');
+        const alignStyle =
+          alignAttr && !ownStyle.includes('text-align') ? `text-align: ${alignAttr};` : '';
+        const combinedStyle = [inheritedStyle, ownStyle, alignStyle].filter(Boolean).join('; ');
+
+        if (hasChildBlocks) {
+          processNodeList(Array.from(el.childNodes), combinedStyle);
+          flushInlineBuffer();
+        } else {
+          if (isEmptyHtmlSpacer(el.outerHTML)) {
+            continue;
+          }
+          const styleAttr = combinedStyle ? ` style="${combinedStyle}"` : '';
+          pushCleanParagraph(el.innerHTML, styleAttr);
+        }
       }
     }
-  }
+  };
 
-  // If editor used single block or free text
-  if (result.length === 0) {
-    return cleanJunkSpans(html)
-      .split(/\n\n+/)
-      .map((p) => p.trim())
-      .filter(Boolean);
-  }
+  processNodeList(Array.from(temp.childNodes));
+  flushInlineBuffer();
 
   return result;
+}
+
+// Sanitize pasted HTML from external sources (websites, Word, Google Docs) while keeping paragraphs & formatting
+function sanitizePastedHtml(rawHtml: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(rawHtml, 'text/html');
+  const body = doc.body;
+
+  // Remove non-content elements
+  body
+    .querySelectorAll('script, style, meta, link, iframe, object, embed, svg, form, input, button, img')
+    .forEach((el) => el.remove());
+
+  const cleanNode = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const esc = document.createElement('span');
+      esc.textContent = node.textContent || '';
+      return esc.innerHTML;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+    const el = node as HTMLElement;
+    const tag = el.tagName.toUpperCase();
+
+    if (tag === 'BR') return '<br>';
+    if (tag === 'HR') return '<hr>';
+
+    const childrenHtml = Array.from(el.childNodes).map(cleanNode).join('');
+
+    // Check inline formatting from style
+    const style = el.style;
+    let wrappedInner = childrenHtml;
+    const fw = style?.fontWeight || '';
+    if ((fw === 'bold' || Number(fw) >= 600) && tag !== 'B' && tag !== 'STRONG' && !/^H[1-6]$/.test(tag)) {
+      wrappedInner = `<strong>${wrappedInner}</strong>`;
+    }
+    if (style?.fontStyle === 'italic' && tag !== 'I' && tag !== 'EM') {
+      wrappedInner = `<em>${wrappedInner}</em>`;
+    }
+    if (style?.textDecoration?.includes('underline') && tag !== 'U') {
+      wrappedInner = `<u>${wrappedInner}</u>`;
+    }
+
+    const textAlign = style?.textAlign || el.getAttribute('align') || '';
+    const alignAttr =
+      textAlign && ['center', 'right', 'justify'].includes(textAlign.toLowerCase())
+        ? ` style="text-align: ${textAlign.toLowerCase()};"`
+        : '';
+
+    if (tag === 'B' || tag === 'STRONG') return `<strong>${wrappedInner}</strong>`;
+    if (tag === 'I' || tag === 'EM') return `<em>${wrappedInner}</em>`;
+    if (tag === 'U') return `<u>${wrappedInner}</u>`;
+    if (tag === 'S' || tag === 'STRIKE' || tag === 'DEL') return `<s>${wrappedInner}</s>`;
+    if (tag === 'H1' || tag === 'H2') return `<h2${alignAttr}>${wrappedInner}</h2>`;
+    if (tag === 'H3' || tag === 'H4' || tag === 'H5' || tag === 'H6') return `<h3${alignAttr}>${wrappedInner}</h3>`;
+    if (tag === 'BLOCKQUOTE') return `<blockquote${alignAttr}>${wrappedInner}</blockquote>`;
+    if (tag === 'UL') return `<ul>${wrappedInner}</ul>`;
+    if (tag === 'OL') return `<ol>${wrappedInner}</ol>`;
+    if (tag === 'LI') return `<li>${wrappedInner}</li>`;
+
+    if (tag === 'P' || tag === 'DIV' || tag === 'SECTION' || tag === 'ARTICLE') {
+      // If it contains nested block tags in wrappedInner, return wrappedInner directly
+      if (/<(p|div|h[1-6]|blockquote|ul|ol)\b/i.test(wrappedInner)) {
+        return wrappedInner;
+      }
+      const trimmed = wrappedInner.trim();
+      if (!trimmed || isEmptyHtmlSpacer(trimmed)) return '';
+      return `<p${alignAttr}>${trimmed}</p>`;
+    }
+
+    return wrappedInner;
+  };
+
+  const rawResult = Array.from(body.childNodes).map(cleanNode).join('');
+  const paragraphs = toParagraphs(rawResult);
+  return paragraphs.join('');
 }
 
 const FONT_FAMILIES = [
@@ -135,11 +379,16 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   const [codeValue, setCodeValue] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const isFocusedRef = useRef(false);
-  const lastHtmlRef = useRef('');
+  const lastHtmlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    try {
+      document.execCommand('defaultParagraphSeparator', false, 'p');
+    } catch {}
+  }, []);
 
   // Sync incoming value to editor DOM without disturbing the active cursor
   useEffect(() => {
-    // If user is actively editing inside the editor, NEVER overwrite DOM innerHTML!
     if (isFocusedRef.current || (editorRef.current && editorRef.current.contains(document.activeElement))) {
       return;
     }
@@ -151,16 +400,39 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
 
     if (editorRef.current && editorRef.current.innerHTML !== nextHtml) {
       editorRef.current.innerHTML = nextHtml;
-      lastHtmlRef.current = nextHtml;
     }
-    setCodeValue(nextHtml);
+    lastHtmlRef.current = nextHtml;
+    setCodeValue(toParagraphs(nextHtml).join('\n\n'));
   }, [value]);
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const text = e.clipboardData.getData('text/plain');
-    if (text) {
-      document.execCommand('insertText', false, text);
+    const htmlData = e.clipboardData.getData('text/html');
+    const plainText = e.clipboardData.getData('text/plain');
+
+    let htmlToInsert = '';
+    if (htmlData && htmlData.trim()) {
+      htmlToInsert = sanitizePastedHtml(htmlData);
+    }
+
+    if (!htmlToInsert && plainText) {
+      const normalized = plainText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const blocks = normalized
+        .split(/\n\s*\n+/)
+        .map((b) => b.trim())
+        .filter(Boolean);
+
+      htmlToInsert = blocks
+        .map((b) => {
+          const esc = document.createElement('span');
+          esc.textContent = b;
+          return `<p>${esc.innerHTML.replace(/\n/g, '<br>')}</p>`;
+        })
+        .join('');
+    }
+
+    if (htmlToInsert) {
+      document.execCommand('insertHTML', false, htmlToInsert);
       handleInput();
     }
   };
@@ -173,7 +445,9 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
       if (editorRef.current) {
-        editorRef.current.innerHTML = cleanJunkSpans(editorRef.current.innerHTML);
+        cleanDomSpans(editorRef.current);
+        const normalized = toParagraphs(editorRef.current.innerHTML).join('');
+        editorRef.current.innerHTML = normalized;
         handleInput();
       }
       return;
@@ -187,25 +461,24 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     if (!editorRef.current) return;
     const html = editorRef.current.innerHTML;
     lastHtmlRef.current = html;
-    setCodeValue(html);
     const paragraphs = toParagraphs(html);
+    setCodeValue(paragraphs.join('\n\n'));
     onChange(paragraphs);
   };
 
-  // Only normalize literal typed </br> when the user finishes and clicks away
+  // Normalize structure when the user finishes editing and clicks away
   const handleBlur = () => {
     isFocusedRef.current = false;
     if (!editorRef.current) return;
-    let html = editorRef.current.innerHTML;
+    const html = editorRef.current.innerHTML;
+    const paragraphs = toParagraphs(html);
+    const normalizedHtml = paragraphs.join('');
     if (/&lt;\/?br\s*\/?&gt;/i.test(html) || /<\/br>/i.test(html)) {
-      html = html
-        .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br>')
-        .replace(/<\/br>/gi, '<br>');
-      editorRef.current.innerHTML = html;
-      lastHtmlRef.current = html;
-      setCodeValue(html);
-      onChange(toParagraphs(html));
+      editorRef.current.innerHTML = normalizedHtml;
     }
+    lastHtmlRef.current = editorRef.current.innerHTML;
+    setCodeValue(paragraphs.join('\n\n'));
+    onChange(paragraphs);
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -217,7 +490,9 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     const paragraphs = toParagraphs(val);
     onChange(paragraphs);
     if (editorRef.current) {
-      editorRef.current.innerHTML = val;
+      const nextHtml = paragraphs.join('');
+      editorRef.current.innerHTML = nextHtml;
+      lastHtmlRef.current = nextHtml;
     }
   };
 
@@ -252,7 +527,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     handleInput();
   };
 
-  // Helper to wrap selected text in custom CSS style
+  // Helper to wrap selected text in custom CSS style safely across single or multiple paragraphs
   const applyCustomStyle = (property: string, styleValue: string) => {
     if (isCodeView) return;
     if (editorRef.current) {
@@ -261,13 +536,27 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-      if (property === 'font-family') {
-        exec('fontName', styleValue);
-      }
       return;
     }
 
     const range = selection.getRangeAt(0);
+
+    // Check if selection spans multiple block elements inside editorRef
+    if (editorRef.current) {
+      const blocks = Array.from(
+        editorRef.current.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, blockquote, li')
+      ) as HTMLElement[];
+      const intersectedBlocks = blocks.filter((b) => selection.containsNode(b, true));
+
+      if (intersectedBlocks.length > 1) {
+        for (const blk of intersectedBlocks) {
+          blk.style.setProperty(property, styleValue);
+        }
+        handleInput();
+        return;
+      }
+    }
+
     const span = document.createElement('span');
     span.style.setProperty(property, styleValue);
 
@@ -289,7 +578,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     .trim()
     .split(/\s+/)
     .filter(Boolean).length;
-  const paragraphCount = Array.isArray(value) ? value.length : toParagraphs(codeValue).length;
+  const paragraphCount = Array.isArray(value) ? value.filter((p) => !isEmptyHtmlSpacer(p)).length : toParagraphs(codeValue).length;
 
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-background shadow-sm transition-all focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30">
@@ -629,12 +918,16 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
           type="button"
           onClick={() => {
             if (!isCodeView) {
-              setCodeValue(editorRef.current?.innerHTML || '');
+              const paragraphs = toParagraphs(editorRef.current?.innerHTML || '');
+              setCodeValue(paragraphs.join('\n\n'));
             } else {
+              const paragraphs = toParagraphs(codeValue);
+              const nextHtml = paragraphs.join('');
               if (editorRef.current) {
-                editorRef.current.innerHTML = codeValue;
-                lastHtmlRef.current = codeValue;
+                editorRef.current.innerHTML = nextHtml;
+                lastHtmlRef.current = nextHtml;
               }
+              onChange(paragraphs);
             }
             setIsCodeView(!isCodeView);
           }}
@@ -667,6 +960,9 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
           contentEditable={!isCodeView}
           onFocus={() => {
             isFocusedRef.current = true;
+            try {
+              document.execCommand('defaultParagraphSeparator', false, 'p');
+            } catch {}
           }}
           onBlur={handleBlur}
           onInput={handleInput}
@@ -681,7 +977,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
           }}
           data-placeholder={placeholder}
           style={{ minHeight }}
-          className={`p-4 text-lg font-serif leading-relaxed text-foreground focus:outline-none story-rich-content whitespace-pre-line ${
+          className={`p-4 text-lg font-serif leading-relaxed text-foreground focus:outline-none story-rich-content ${
             isCodeView ? 'hidden' : 'block'
           } empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/40 empty:before:italic empty:before:pointer-events-none`}
         />

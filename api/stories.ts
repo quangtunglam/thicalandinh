@@ -73,6 +73,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const slug = body.slug || id;
 
       if (db) {
+        // Prevent unique constraint conflict if another story row has the same slug
+        await db.query('DELETE FROM stories WHERE slug = $1 AND id <> $2', [slug, id]);
+
         await db.query(
           `INSERT INTO stories (id, slug, title, subtitle, theme, img, summary, content, moral, audio_vi, audio_cs)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -86,7 +89,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              content = EXCLUDED.content,
              moral = EXCLUDED.moral,
              audio_vi = EXCLUDED.audio_vi,
-             audio_cs = EXCLUDED.audio_cs`,
+             audio_cs = EXCLUDED.audio_cs,
+             created_at = CURRENT_TIMESTAMP`,
           [
             id,
             slug,
@@ -116,7 +120,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const { id } = req.query;
       if (db && id) {
-        await db.query('DELETE FROM stories WHERE id = $1', [id]);
+        await db.query('DELETE FROM stories WHERE id = $1 OR slug = $1', [id]);
       }
       return res.status(200).json({ success: true, message: 'Đã xóa bài viết!' });
     }

@@ -3,6 +3,7 @@ import { Link, useParams } from 'wouter';
 import { Story } from '@/data/stories';
 import { apiService } from '@/services/api';
 import { audioStorage } from '@/services/audioStorage';
+import { toHtml } from '@/components/WysiwygEditor';
 import { ArrowLeft, Sparkles, Headphones, Volume2 } from 'lucide-react';
 
 export const StoryDetail: React.FC = () => {
@@ -95,9 +96,11 @@ export const StoryDetail: React.FC = () => {
         <h1 className="font-serif text-4xl md:text-5xl font-bold mb-4 text-foreground">
           {story.title}
         </h1>
-        <p className="text-xl text-foreground/70 italic font-serif">
-          "{story.subtitle}"
-        </p>
+        {story.subtitle && story.subtitle.trim() && (
+          <p className="text-xl text-foreground/70 italic font-serif">
+            "{story.subtitle.trim().replace(/^["“”]+|["“”]+$/g, '')}"
+          </p>
+        )}
       </div>
 
       {/* Banner image */}
@@ -165,7 +168,10 @@ export const StoryDetail: React.FC = () => {
               <div className="flex items-center justify-between text-xs text-foreground/70 mb-2 font-medium">
                 <span className="flex items-center gap-1.5">
                   <Volume2 className="w-4 h-4 text-primary" />
-                  Đang phát: <strong className="text-foreground">{activeAudioLang === 'vi' ? 'Bản đọc Tiếng Việt 🇻🇳' : 'Bản đọc Tiếng Séc 🇨🇿'}</strong>
+                  Đang phát:{' '}
+                  <strong className="text-foreground">
+                    {activeAudioLang === 'vi' ? 'Bản đọc Tiếng Việt 🇻🇳' : 'Bản đọc Tiếng Séc 🇨🇿'}
+                  </strong>
                 </span>
                 <span className="text-[11px] text-foreground/50 italic">Định dạng âm thanh MP3</span>
               </div>
@@ -183,36 +189,10 @@ export const StoryDetail: React.FC = () => {
       )}
 
       {/* Story Content */}
-      <article className="font-serif text-lg text-foreground/90 leading-relaxed space-y-6 text-justify story-rich-content whitespace-pre-line">
-        {story.content.map((paragraph, index) => {
-          let trimmed = (paragraph || '').trim();
-          trimmed = trimmed
-            .replace(/&lt;\/?br\s*\/?&gt;/gi, '<br />')
-            .replace(/<\/?br\s*\/?>/gi, '<br />')
-            .replace(/<span style="[^"]*font-size:\s*1rem;?[^"]*">(.*?)<\/span>/gi, '$1')
-            .replace(/<span style="[^"]*color:\s*rgb\(44,\s*40,\s*38\);?[^"]*">(.*?)<\/span>/gi, '$1');
-
-          const isHtmlBlock = /^<(p|div|h[1-6]|blockquote|ul|ol|table|hr)/i.test(trimmed);
-
-          if (isHtmlBlock) {
-            return (
-              <div
-                key={index}
-                className="leading-relaxed whitespace-pre-line"
-                dangerouslySetInnerHTML={{ __html: trimmed }}
-              />
-            );
-          }
-
-          return (
-            <p
-              key={index}
-              className="leading-relaxed whitespace-pre-line"
-              dangerouslySetInnerHTML={{ __html: trimmed }}
-            />
-          );
-        })}
-      </article>
+      <article
+        className="font-serif text-lg text-foreground/90 leading-relaxed text-justify story-rich-content"
+        dangerouslySetInnerHTML={{ __html: toHtml(story.content || []) }}
+      />
 
       {/* Moral lesson box */}
       {story.moral && (
@@ -220,7 +200,7 @@ export const StoryDetail: React.FC = () => {
           <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-wider text-sm mb-2">
             <Sparkles className="w-4 h-4" /> Bài học nhân sinh
           </div>
-          <p className="font-serif text-base italic text-foreground/90 leading-relaxed">
+          <p className="font-serif text-base italic text-foreground/90 leading-relaxed whitespace-pre-line">
             {story.moral}
           </p>
         </div>

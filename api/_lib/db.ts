@@ -104,6 +104,9 @@ export async function initDatabaseSchema() {
     await db.query(`ALTER TABLE poems ADD COLUMN IF NOT EXISTS youtube_url TEXT;`);
     await db.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS audio_vi TEXT;`);
     await db.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS audio_cs TEXT;`);
+    await db.query(`ALTER TABLE stories ALTER COLUMN title TYPE TEXT;`);
+    await db.query(`ALTER TABLE stories ALTER COLUMN subtitle TYPE TEXT;`);
+    await db.query(`ALTER TABLE stories ALTER COLUMN theme TYPE TEXT;`);
     await db.query(`ALTER TABLE library ADD COLUMN IF NOT EXISTS slug VARCHAR(255);`);
     await db.query(`ALTER TABLE library ADD COLUMN IF NOT EXISTS img TEXT;`);
     await db.query(`ALTER TABLE library ADD COLUMN IF NOT EXISTS description TEXT;`);
