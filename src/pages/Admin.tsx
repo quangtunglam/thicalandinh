@@ -1413,13 +1413,14 @@ export const Admin: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase mb-1">Chủ đề / Thể loại</label>
-                  <input
-                    type="text"
-                    value={storyForm.theme || ''}
+                  <select
+                    value={(storyForm.theme || '').toLowerCase().includes('cổ tích') ? 'Cổ tích' : 'Điển cố'}
                     onChange={(e) => setStoryForm({ ...storyForm, theme: e.target.value })}
-                    placeholder="VD: Ý chí kiên định"
                     className="w-full bg-background border border-border rounded px-3.5 py-2 text-sm focus:outline-none focus:border-primary"
-                  />
+                  >
+                    <option value="Điển cố">Điển Cố</option>
+                    <option value="Cổ tích">Cổ Tích</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase mb-1">Câu hỏi gợi mở / Phụ đề</label>
