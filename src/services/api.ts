@@ -142,6 +142,7 @@ export const apiService = {
             translation: p.translation ? (Array.isArray(p.translation) ? p.translation : JSON.parse(p.translation)) : undefined,
             explanation: p.explanation || '',
             tags: Array.isArray(p.tags) ? p.tags : (typeof p.tags === 'string' ? JSON.parse(p.tags) : []),
+            youtubeUrl: p.youtube_url || p.youtubeUrl || '',
           }));
           return normalized;
         }

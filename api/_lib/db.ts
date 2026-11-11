@@ -39,6 +39,7 @@ export async function initDatabaseSchema() {
       translation JSONB,
       explanation TEXT,
       tags JSONB,
+      youtube_url TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -100,6 +101,7 @@ export async function initDatabaseSchema() {
   await db.query(createTablesSql);
   // Ensure columns exist if table was already created
   try {
+    await db.query(`ALTER TABLE poems ADD COLUMN IF NOT EXISTS youtube_url TEXT;`);
     await db.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS audio_vi TEXT;`);
     await db.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS audio_cs TEXT;`);
     await db.query(`ALTER TABLE library ADD COLUMN IF NOT EXISTS slug VARCHAR(255);`);

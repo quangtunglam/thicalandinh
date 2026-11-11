@@ -13,6 +13,7 @@ export interface Poem {
   translation?: string[];
   explanation: string;
   tags: string[];
+  youtubeUrl?: string;
 }
 
 export const POEMS: Poem[] = [

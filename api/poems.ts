@@ -22,8 +22,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Auto-seed if empty
           for (const poem of INITIAL_POEMS) {
             await db.query(
-              `INSERT INTO poems (id, slug, title, author, category, period, img, featured_quote, verses, original_text, translation, explanation, tags)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+              `INSERT INTO poems (id, slug, title, author, category, period, img, featured_quote, verses, original_text, translation, explanation, tags, youtube_url)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                ON CONFLICT (id) DO NOTHING`,
               [
                 poem.id,
@@ -38,14 +38,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 JSON.stringify(poem.original_text || []),
                 JSON.stringify(poem.translation || []),
                 poem.explanation,
-                JSON.stringify(poem.tags || [])
+                JSON.stringify(poem.tags || []),
+                ''
               ]
             );
           }
           const seeded = await db.query('SELECT * FROM poems ORDER BY created_at DESC');
-          return res.status(200).json(seeded.rows);
+          return res.status(200).json(seeded.rows.map((r: any) => ({
+            ...r,
+            youtubeUrl: r.youtube_url || r.youtubeUrl || ''
+          })));
         }
-        return res.status(200).json(result.rows);
+        return res.status(200).json(result.rows.map((r: any) => ({
+          ...r,
+          youtubeUrl: r.youtube_url || r.youtubeUrl || ''
+        })));
       }
     } catch (err) {
       console.warn('DB error in GET /api/poems, falling back to INITIAL_POEMS:', err);
@@ -74,8 +81,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (db) {
         await db.query(
-          `INSERT INTO poems (id, slug, title, author, category, period, img, featured_quote, verses, original_text, translation, explanation, tags)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          `INSERT INTO poems (id, slug, title, author, category, period, img, featured_quote, verses, original_text, translation, explanation, tags, youtube_url)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
            ON CONFLICT (id) DO UPDATE SET
              slug = EXCLUDED.slug,
              title = EXCLUDED.title,
@@ -89,6 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              translation = EXCLUDED.translation,
              explanation = EXCLUDED.explanation,
              tags = EXCLUDED.tags,
+             youtube_url = EXCLUDED.youtube_url,
              updated_at = CURRENT_TIMESTAMP`,
           [
             id,
@@ -98,12 +106,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             body.category,
             body.period || '',
             body.img || '/assets/article_1-Bnc_y2PA.jpg',
-            body.featured_quote || body.verses?.[0] || '',
+            body.featured_quote || body.featuredQuote || body.verses?.[0] || '',
             JSON.stringify(body.verses || []),
-            JSON.stringify(body.original_text || []),
+            JSON.stringify(body.original_text || body.originalText || []),
             JSON.stringify(body.translation || []),
             body.explanation || '',
-            JSON.stringify(body.tags || [])
+            JSON.stringify(body.tags || []),
+            body.youtubeUrl || body.youtube_url || ''
           ]
         );
       }

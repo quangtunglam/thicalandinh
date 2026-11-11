@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Poem } from '@/data/poems';
-import { X, BookOpen, Copy, Check, Sparkles } from 'lucide-react';
+import { extractYoutubeEmbedUrl } from '@/lib/utils';
+import { X, BookOpen, Copy, Check, Sparkles, Youtube } from 'lucide-react';
 
 interface PoemModalProps {
   poem: Poem | null;
@@ -12,6 +13,8 @@ export const PoemModal: React.FC<PoemModalProps> = ({ poem, onClose }) => {
   const [activeTab, setActiveTab] = useState<'text' | 'original' | 'analysis'>('text');
 
   if (!poem) return null;
+
+  const embedUrl = extractYoutubeEmbedUrl(poem.youtubeUrl);
 
   const handleCopy = () => {
     const textToCopy = `${poem.title} - ${poem.author}\n\n${poem.verses.join('\n')}`;
@@ -48,9 +51,9 @@ export const PoemModal: React.FC<PoemModalProps> = ({ poem, onClose }) => {
               activeTab === 'text' ? 'border-primary text-primary' : 'border-transparent text-foreground/60 hover:text-foreground'
             }`}
           >
-            Văn bản thơ
+            Văn bản thơ {embedUrl ? '& Ngâm thơ' : ''}
           </button>
-          {poem.originalText && (
+          {poem.originalText && poem.originalText.length > 0 && (
             <button
               onClick={() => setActiveTab('original')}
               className={`py-3 font-serif font-semibold border-b-2 transition-colors ${
@@ -72,6 +75,24 @@ export const PoemModal: React.FC<PoemModalProps> = ({ poem, onClose }) => {
 
         {/* Content Area */}
         <div className="p-6 md:p-8 overflow-y-auto flex-1 text-center bg-card/60">
+          {/* Embedded YouTube Recitation Player */}
+          {embedUrl && (
+            <div className="mb-6">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-primary mb-2.5">
+                <Youtube className="w-4 h-4 text-red-600" /> Thưởng Thức Diễn Ngâm Thi Ca
+              </div>
+              <div className="aspect-video w-full rounded-lg overflow-hidden border border-border shadow-md bg-black">
+                <iframe
+                  src={embedUrl}
+                  title={`Ngâm thơ: ${poem.title}`}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          )}
+
           {activeTab === 'text' && (
             <div className="max-w-md mx-auto py-4">
               <div className="space-y-2 font-serif text-lg md:text-xl leading-relaxed text-foreground italic">

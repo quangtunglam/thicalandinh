@@ -23,10 +23,12 @@ import {
   Key,
   ShieldCheck,
   Headphones,
-  Volume2
+  Volume2,
+  Youtube
 } from 'lucide-react';
 import { audioStorage } from '@/services/audioStorage';
 import { WysiwygEditor } from '@/components/WysiwygEditor';
+import { extractYoutubeEmbedUrl } from '@/lib/utils';
 
 // Helper: Compress an uploaded file using an offscreen Canvas
 
@@ -149,6 +151,7 @@ export const Admin: React.FC = () => {
     translation: [''],
     explanation: '',
     tags: ['Thi Ca', 'Kinh điển'],
+    youtubeUrl: '',
   });
 
   // Form Fields for Story
@@ -277,6 +280,7 @@ export const Admin: React.FC = () => {
         translation: (poemForm.translation || []).filter(v => v.trim() !== ''),
         explanation: poemForm.explanation?.trim() || '',
         tags: poemForm.tags || ['Thi Ca'],
+        youtubeUrl: extractYoutubeEmbedUrl(poemForm.youtubeUrl) || poemForm.youtubeUrl?.trim() || '',
       };
 
       await apiService.savePoem(newPoem);
@@ -786,6 +790,7 @@ export const Admin: React.FC = () => {
                   translation: [''],
                   explanation: '',
                   tags: ['Thi Ca'],
+                  youtubeUrl: '',
                 });
                 setPoemModalOpen(true);
               }}
@@ -802,7 +807,14 @@ export const Admin: React.FC = () => {
                   <div className="flex items-center gap-4">
                     <img src={p.img} alt={p.title} className="w-14 h-14 rounded object-cover border border-border" />
                     <div>
-                      <h4 className="font-serif font-bold text-lg text-foreground">{p.title}</h4>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-serif font-bold text-lg text-foreground">{p.title}</h4>
+                        {p.youtubeUrl && (
+                          <span className="text-[10px] bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 px-2 py-0.5 rounded font-medium inline-flex items-center gap-1">
+                            <Youtube className="w-3 h-3" /> Video Ngâm Thơ
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-foreground/60 font-serif italic">— {p.author} • Thể loại: {p.category}</p>
                       <p className="text-xs text-foreground/50 mt-1 line-clamp-1">{p.verses[0]}</p>
                     </div>
@@ -1207,6 +1219,50 @@ export const Admin: React.FC = () => {
                     />
                   </label>
                 </div>
+              </div>
+
+              {/* YouTube Embed / Recitation Video */}
+              <div className="p-4 bg-muted/40 border border-primary/25 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <Youtube className="w-4 h-4 text-red-600" /> Nhúng Video Ngâm Thơ Từ YouTube (Embed Code Hoặc Link)
+                  </label>
+                  {poemForm.youtubeUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setPoemForm({ ...poemForm, youtubeUrl: '' })}
+                      className="text-[11px] text-red-600 hover:underline font-normal"
+                    >
+                      ✕ Gỡ bỏ video
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-foreground/60 leading-relaxed">
+                  Dán trực tiếp mã nhúng <code>&lt;iframe ...&gt;&lt;/iframe&gt;</code> lấy từ YouTube (bấm <em>Chia sẻ &rarr; Nhúng</em>) hoặc dán đường dẫn video YouTube (<code>https://www.youtube.com/watch?v=...</code> hoặc <code>https://youtu.be/...</code>).
+                </p>
+                <textarea
+                  rows={2}
+                  value={poemForm.youtubeUrl || ''}
+                  onChange={(e) => setPoemForm({ ...poemForm, youtubeUrl: e.target.value })}
+                  placeholder='Dán mã <iframe src="https://www.youtube.com/embed/..." ...></iframe> hoặc link YouTube vào đây...'
+                  className="w-full bg-background border border-border rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-primary"
+                />
+                {extractYoutubeEmbedUrl(poemForm.youtubeUrl) && (
+                  <div className="pt-1">
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold mb-1.5">
+                      ✓ Xem trước trình phát ngâm thơ YouTube:
+                    </p>
+                    <div className="aspect-video w-full max-w-md rounded-lg overflow-hidden border border-border shadow-sm bg-black">
+                      <iframe
+                        src={extractYoutubeEmbedUrl(poemForm.youtubeUrl) || ''}
+                        title="Xem trước video ngâm thơ"
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Verses */}
