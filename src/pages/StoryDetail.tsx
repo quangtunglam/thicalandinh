@@ -85,7 +85,7 @@ export const StoryDetail: React.FC = () => {
         href="/co-tich"
         className="inline-flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-widest hover:underline mb-8"
       >
-        <ArrowLeft className="w-4 h-4" /> Quay lại Cổ Tích & Điển Cố
+        <ArrowLeft className="w-4 h-4" /> Quay lại Điển Cố
       </Link>
 
       {/* Header */}

@@ -707,7 +707,7 @@ export const Admin: React.FC = () => {
           className="bg-card border border-border p-6 rounded-lg flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors"
         >
           <div>
-            <p className="text-xs text-foreground/60 uppercase tracking-wider mb-1 font-bold">Cổ Tích & Điển Cố</p>
+            <p className="text-xs text-foreground/60 uppercase tracking-wider mb-1 font-bold">Điển Cố</p>
             <h3 className="font-serif text-3xl font-bold text-primary">{stories.length} câu chuyện</h3>
           </div>
           <BookMarked className="w-8 h-8 text-primary/30" />
@@ -752,7 +752,7 @@ export const Admin: React.FC = () => {
             activeTab === 'stories' ? 'border-primary text-primary' : 'border-transparent text-foreground/60 hover:text-foreground'
           }`}
         >
-          <BookMarked className="w-4 h-4" /> Cổ Tích & Điển Cố ({stories.length})
+          <BookMarked className="w-4 h-4" /> Điển Cố ({stories.length})
         </button>
         <button
           onClick={() => setActiveTab('scholars')}
@@ -853,7 +853,7 @@ export const Admin: React.FC = () => {
       {activeTab === 'stories' && (
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="font-serif text-xl font-bold">Danh Sách Cổ Tích & Điển Cố</h2>
+            <h2 className="font-serif text-xl font-bold">Danh Sách Điển Cố</h2>
             <button
               onClick={() => {
                 setFormError('');
