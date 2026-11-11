@@ -151,7 +151,7 @@ export const ThiCa: React.FC<ThiCaProps> = ({ onSelectPoem }) => {
                     — {poem.author}
                   </p>
                   <p className="font-serif text-foreground/80 italic text-sm leading-relaxed mb-6 whitespace-pre-line line-clamp-3 bg-background/50 p-3.5 rounded border border-border/40">
-                    "{poem.featuredQuote || poem.verses[0]}"
+                    "{poem.verses?.length ? poem.verses.slice(0, 3).join('\n') : poem.featuredQuote}"
                   </p>
                 </div>
 

@@ -266,6 +266,8 @@ export const Admin: React.FC = () => {
       setIsSaving(true);
       const finalImg = poemForm.img ? await compressBase64IfNeeded(poemForm.img) : '/assets/article_1-Bnc_y2PA.jpg';
 
+      const cleanedVerses = (poemForm.verses || []).map(v => v.trim()).filter(v => v !== '');
+
       const newPoem: Poem = {
         id: poemForm.id || 'poem-' + Date.now(),
         slug: (poemForm.slug && poemForm.slug.trim()) ? toSlug(poemForm.slug.trim()) : toSlug(poemForm.title || ''),
@@ -274,8 +276,8 @@ export const Admin: React.FC = () => {
         category: (poemForm.category as any) || 'Đường luật',
         period: poemForm.period?.trim() || 'Cổ cận đại',
         img: finalImg,
-        featuredQuote: poemForm.featuredQuote?.trim() || poemForm.verses?.[0]?.trim() || '',
-        verses: (poemForm.verses || []).filter(v => v.trim() !== ''),
+        featuredQuote: cleanedVerses.slice(0, 3).join('\n') || '',
+        verses: cleanedVerses,
         originalText: (poemForm.originalText || []).filter(v => v.trim() !== ''),
         translation: (poemForm.translation || []).filter(v => v.trim() !== ''),
         explanation: poemForm.explanation?.trim() || '',
