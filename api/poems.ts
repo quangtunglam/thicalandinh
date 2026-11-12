@@ -2,6 +2,32 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDbPool, initDatabaseSchema } from './_lib/db.js';
 import { INITIAL_POEMS } from './_lib/seedData.js';
 
+async function resolveVideoThumbnail(videoUrl?: string): Promise<string | null> {
+  if (!videoUrl) return null;
+  const ytMatch = videoUrl.match(/(?:youtube(?:-nocookie)?\.com\/(?:embed\/|watch\?.*v=|shorts\/|live\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
+  if (ytMatch && ytMatch[1]) {
+    return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+  }
+  const gjwMatch = videoUrl.match(/ganjingworld\.com\/(?:[a-z]{2}(?:-[a-zA-Z]{2,4})?\/)?(?:video|shorts|embed|s|live)\/([a-zA-Z0-9_-]+)/i);
+  if (gjwMatch && gjwMatch[1]) {
+    try {
+      const resp = await fetch(`https://www.ganjingworld.com/video/${gjwMatch[1]}`);
+      if (resp.ok) {
+        const html = await resp.text();
+        const ogMatch =
+          html.match(/property=["']og:image["']\s+content=["']([^"']+)["']/i) ||
+          html.match(/content=["']([^"']+)["']\s+property=["']og:image["']/i);
+        if (ogMatch && ogMatch[1]) {
+          return ogMatch[1];
+        }
+      }
+    } catch {
+      // ignore fetch errors
+    }
+  }
+  return null;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -78,6 +104,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const body = req.body;
       const id = body.id || 'poem-' + Date.now();
       const slug = body.slug || id;
+      const videoUrl = body.youtubeUrl || body.youtube_url || '';
+
+      let finalImg = body.img || '';
+      if (videoUrl && (!finalImg || finalImg === '/assets/article_1-Bnc_y2PA.jpg')) {
+        const videoThumb = await resolveVideoThumbnail(videoUrl);
+        if (videoThumb) {
+          finalImg = videoThumb;
+        }
+      }
+      if (!finalImg) {
+        finalImg = '/assets/article_1-Bnc_y2PA.jpg';
+      }
 
       if (db) {
         await db.query('DELETE FROM poems WHERE slug = $1 AND id <> $2', [slug, id]);
@@ -106,14 +144,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             body.author,
             body.category,
             body.period || '',
-            body.img || '/assets/article_1-Bnc_y2PA.jpg',
+            finalImg,
             body.featured_quote || body.featuredQuote || body.verses?.[0] || '',
             JSON.stringify(body.verses || []),
             JSON.stringify(body.original_text || body.originalText || []),
             JSON.stringify(body.translation || []),
             body.explanation || '',
             JSON.stringify(body.tags || []),
-            body.youtubeUrl || body.youtube_url || ''
+            videoUrl
           ]
         );
       }

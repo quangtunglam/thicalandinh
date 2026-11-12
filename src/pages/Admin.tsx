@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { audioStorage } from '@/services/audioStorage';
 import { WysiwygEditor } from '@/components/WysiwygEditor';
-import { extractYoutubeEmbedUrl } from '@/lib/utils';
+import { extractYoutubeEmbedUrl, extractYoutubeThumbnailUrl } from '@/lib/utils';
 
 // Helper: Compress an uploaded file using an offscreen Canvas
 
@@ -264,7 +264,13 @@ export const Admin: React.FC = () => {
 
     try {
       setIsSaving(true);
-      const finalImg = poemForm.img ? await compressBase64IfNeeded(poemForm.img) : '/assets/article_1-Bnc_y2PA.jpg';
+      const embedVideoUrl = extractYoutubeEmbedUrl(poemForm.youtubeUrl) || poemForm.youtubeUrl?.trim() || '';
+      const hasCustomImg = poemForm.img && poemForm.img.trim() !== '' && poemForm.img !== '/assets/article_1-Bnc_y2PA.jpg';
+      const finalImg = hasCustomImg
+        ? await compressBase64IfNeeded(poemForm.img!)
+        : embedVideoUrl
+        ? extractYoutubeThumbnailUrl(embedVideoUrl) || ''
+        : '/assets/article_1-Bnc_y2PA.jpg';
 
       const cleanedVerses = (poemForm.verses || []).map(v => v.trim()).filter(v => v !== '');
 
@@ -282,7 +288,7 @@ export const Admin: React.FC = () => {
         translation: (poemForm.translation || []).filter(v => v.trim() !== ''),
         explanation: poemForm.explanation?.trim() || '',
         tags: poemForm.tags || ['Thi Ca'],
-        youtubeUrl: extractYoutubeEmbedUrl(poemForm.youtubeUrl) || poemForm.youtubeUrl?.trim() || '',
+        youtubeUrl: embedVideoUrl,
       };
 
       await apiService.savePoem(newPoem);
@@ -785,7 +791,7 @@ export const Admin: React.FC = () => {
                   author: '',
                   category: 'Đường luật',
                   period: '',
-                  img: '/assets/article_1-Bnc_y2PA.jpg',
+                  img: '',
                   featuredQuote: '',
                   verses: [''],
                   originalText: [''],
@@ -804,10 +810,19 @@ export const Admin: React.FC = () => {
 
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="divide-y divide-border">
-              {poems.map((p) => (
+              {poems.map((p) => {
+                const thumbSrc =
+                  p.img && p.img !== '/assets/article_1-Bnc_y2PA.jpg'
+                    ? p.img
+                    : extractYoutubeThumbnailUrl(p.youtubeUrl) || p.img || '/assets/article_1-Bnc_y2PA.jpg';
+                return (
                 <div key={p.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-4">
-                    <img src={p.img} alt={p.title} className="w-14 h-14 rounded object-cover border border-border" />
+                    <img
+                      src={thumbSrc}
+                      alt={p.title}
+                      className={`${p.youtubeUrl ? 'w-20 h-12' : 'w-14 h-14'} rounded object-cover border border-border shrink-0`}
+                    />
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="font-serif font-bold text-lg text-foreground">{p.title}</h4>
@@ -843,7 +858,8 @@ export const Admin: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

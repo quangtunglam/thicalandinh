@@ -68,3 +68,16 @@ export function extractYoutubeEmbedUrl(input?: string): string | null {
 
   return null;
 }
+
+/**
+ * Extracts a direct YouTube video thumbnail URL if the video is from YouTube.
+ */
+export function extractYoutubeThumbnailUrl(input?: string): string | null {
+  const embed = extractYoutubeEmbedUrl(input);
+  if (!embed) return null;
+  const ytMatch = embed.match(/youtube(?:-nocookie)?\.com\/embed\/([a-zA-Z0-9_-]{11})/i);
+  if (ytMatch && ytMatch[1]) {
+    return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+  }
+  return null;
+}
