@@ -98,9 +98,10 @@ export const CoTich: React.FC = () => {
       {/* Stories Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {filteredStories.map((story) => (
-          <div
+          <Link
             key={story.slug}
-            className="bg-card border border-border/80 rounded-lg overflow-hidden flex flex-col hover:border-primary/60 transition-all hover:shadow-lg group"
+            href={`/cau-chuyen/${story.slug}`}
+            className="bg-card border border-border/80 rounded-lg overflow-hidden flex flex-col hover:border-primary/60 transition-all hover:shadow-lg group cursor-pointer"
           >
             <div className="aspect-video overflow-hidden bg-muted relative">
               <img
@@ -126,14 +127,11 @@ export const CoTich: React.FC = () => {
                 </p>
               </div>
 
-              <Link
-                href={`/cau-chuyen/${story.slug}`}
-                className="inline-flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-widest group-hover:gap-3 transition-all"
-              >
+              <span className="inline-flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-widest group-hover:gap-3 transition-all">
                 ĐỌC TOÀN VĂN <ArrowRight className="w-4 h-4" />
-              </Link>
+              </span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

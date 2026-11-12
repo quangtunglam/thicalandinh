@@ -238,7 +238,10 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
             </div>
 
             {featuredStory && (
-              <div className="bg-card p-8 md:p-10 border border-border/50 rounded-sm relative overflow-hidden group">
+              <Link
+                href={`/cau-chuyen/${featuredStory.slug}`}
+                className="bg-card p-8 md:p-10 border border-border/50 rounded-sm relative overflow-hidden group block cursor-pointer hover:border-primary/60 transition-all"
+              >
                 <div className="absolute -right-20 -bottom-20 opacity-5 pointer-events-none transform rotate-12">
                   <span className="font-serif text-[200px]">知</span>
                 </div>
@@ -261,14 +264,11 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
                   <p className="font-serif text-foreground/80 leading-relaxed mb-8 text-justify">
                     {featuredStory.summary}
                   </p>
-                  <Link
-                    href={`/cau-chuyen/${featuredStory.slug}`}
-                    className="inline-flex items-center gap-3 bg-primary text-primary-foreground px-6 py-3 rounded-sm font-medium tracking-widest text-sm uppercase hover:bg-primary/90 transition-colors w-max"
-                  >
+                  <span className="inline-flex items-center gap-3 bg-primary text-primary-foreground px-6 py-3 rounded-sm font-medium tracking-widest text-sm uppercase hover:bg-primary/90 transition-colors w-max">
                     ĐỌC CÂU CHUYỆN <ArrowRight className="w-4 h-4" />
-                  </Link>
+                  </span>
                 </div>
-              </div>
+              </Link>
             )}
           </div>
 
