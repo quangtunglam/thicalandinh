@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Library, BookOpen, ExternalLink, FileText, X, Loader2 } from 'lucide-react';
+import { Link } from 'wouter';
+import { Download, Library, BookOpen, ExternalLink, FileText, X, Loader2, Filter, Search, Plus } from 'lucide-react';
 import { BOOKS, Book } from '@/data/books';
 import { apiService } from '@/services/api';
 import { audioStorage } from '@/services/audioStorage';
@@ -12,10 +13,12 @@ function extractGoogleDriveFileId(url: string): string | null {
 export const ThuVien: React.FC = () => {
   const [books, setBooks] = useState<Book[]>(BOOKS);
   const [selectedCategory, setSelectedCategory] = useState<string>('Tất cả');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [previewBook, setPreviewBook] = useState<{ book: Book; url: string } | null>(null);
   const [toastMsg, setToastMsg] = useState<string>('');
   const [loadingBookId, setLoadingBookId] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
+  const isAdmin = apiService.isAdminLoggedIn();
 
   useEffect(() => {
     apiService.getBooks().then((loadedBooks) => {
@@ -46,11 +49,31 @@ export const ThuVien: React.FC = () => {
     setTimeout(() => setToastMsg(''), 6000);
   };
 
-  const categories = ['Tất cả', ...Array.from(new Set(books.map(b => b.type).filter(Boolean)))];
+  const categories = [
+    'Tất cả',
+    ...Array.from(
+      new Set([
+        'Thư tịch cổ',
+        'Văn bản cổ',
+        'Thi tập',
+        'Kinh điển',
+        'Triết học',
+        ...books.map((b) => b.type).filter(Boolean),
+      ])
+    ),
+  ];
 
-  const filteredBooks = selectedCategory === 'Tất cả'
-    ? books
-    : books.filter(b => b.type === selectedCategory);
+  const filteredBooks = books.filter((b) => {
+    const matchCat = selectedCategory === 'Tất cả' || b.type === selectedCategory;
+    const q = searchQuery.trim().toLowerCase();
+    const matchSearch =
+      !q ||
+      b.title.toLowerCase().includes(q) ||
+      (b.author || '').toLowerCase().includes(q) ||
+      (b.type || '').toLowerCase().includes(q) ||
+      (b.description || '').toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
 
   const handleDownloadBook = async (book: Book) => {
     if (!book.fileUrl) {
@@ -162,26 +185,51 @@ export const ThuVien: React.FC = () => {
         <p className="font-serif text-foreground/70 text-lg leading-relaxed">
           Bộ sưu tập số hóa các trước tác kinh điển, bản dịch Nôm cổ và công trình nghiên cứu văn học có giá trị.
         </p>
+
+        {isAdmin && (
+          <div className="mt-6">
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-full shadow hover:bg-primary/90 transition-all"
+            >
+              <Plus className="w-4 h-4" /> Tải sách / tài liệu mới
+            </Link>
+          </div>
+        )}
       </div>
 
-      {/* Category Filter */}
-      {categories.length > 2 && (
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
+      {/* Filter & Search Bar */}
+      <div className="bg-card p-6 rounded-lg border border-border mb-12 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs font-semibold text-foreground/60 uppercase mr-2 flex items-center gap-1">
+            <Filter className="w-3.5 h-3.5" /> Thể loại:
+          </span>
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-1.5 rounded-full text-xs font-medium tracking-wider uppercase transition-all ${
+              className={`px-4 py-2 rounded-full text-xs font-medium transition-colors flex items-center gap-1.5 ${
                 selectedCategory === cat
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-card border border-border text-foreground/70 hover:border-primary/40 hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                  : 'bg-background hover:bg-muted text-foreground/80'
               }`}
             >
               {cat}
             </button>
           ))}
         </div>
-      )}
+
+        <div className="relative w-full md:w-72">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm theo tên sách hoặc tác giả..."
+            className="w-full bg-background border border-border rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-primary transition-colors"
+          />
+        </div>
+      </div>
 
       {/* Toast Notification */}
       {toastMsg && (
