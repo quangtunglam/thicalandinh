@@ -133,7 +133,7 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
         <div className="flex items-center justify-center gap-4 mb-16">
           <div className="h-[1px] w-16 md:w-32 bg-primary/30" />
           <h2 className="font-serif text-2xl md:text-3xl font-bold tracking-widest uppercase">
-            BÀI VIẾT NỔI BẬT
+            NỘI DUNG NỔI BẬT
           </h2>
           <div className="h-[1px] w-16 md:w-32 bg-primary/30" />
         </div>
