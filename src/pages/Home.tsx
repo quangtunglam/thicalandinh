@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, BookOpen, Youtube } from 'lucide-react';
 import { CATEGORIES } from '@/data/categories';
 import { VIRTUES } from '@/data/culture';
 import { Poem } from '@/data/poems';
 import { Story } from '@/data/stories';
 import { Scholar } from '@/data/scholars';
 import { apiService } from '@/services/api';
+import { extractYoutubeEmbedUrl } from '@/lib/utils';
 
 interface HomeProps {
   onSelectPoem: (poem: Poem) => void;
@@ -137,42 +138,76 @@ export const Home: React.FC<HomeProps> = ({ onSelectPoem }) => {
           <div className="h-[1px] w-16 md:w-32 bg-primary/30" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {featuredPoems.map((poem) => (
-            <article
-              key={poem.id}
-              onClick={() => onSelectPoem(poem)}
-              className="group cursor-pointer"
-            >
-              <div className="aspect-[4/5] overflow-hidden rounded-sm mb-6 relative bg-muted">
-                <img
-                  src={poem.img}
-                  alt={poem.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-500" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {featuredPoems.map((poem) => {
+            const embedUrl = extractYoutubeEmbedUrl(poem.youtubeUrl);
+            return (
+              <div
+                key={poem.id}
+                onClick={() => onSelectPoem(poem)}
+                className="bg-card border border-border/70 rounded-lg overflow-hidden flex flex-col hover:border-primary/60 transition-all hover:shadow-lg cursor-pointer group"
+              >
+                {embedUrl ? (
+                  <div
+                    className="aspect-video w-full relative bg-black border-b border-border/60"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <iframe
+                      src={embedUrl}
+                      title={`Ngâm thơ: ${poem.title}`}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      loading="lazy"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-52 overflow-hidden relative bg-muted">
+                    <img
+                      src={poem.img}
+                      alt={poem.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute top-3 right-3 bg-background/90 backdrop-blur px-3 py-1 rounded-full text-xs font-serif font-semibold text-primary">
+                      {poem.category}
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-xs text-foreground/50 uppercase tracking-wider">
+                        {poem.period}
+                      </span>
+                      {embedUrl && (
+                        <span className="text-[11px] bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 px-2.5 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
+                          <Youtube className="w-3 h-3" /> Ngâm thơ
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-serif text-2xl font-bold text-foreground mb-1 group-hover:text-primary transition-colors">
+                      {poem.title}
+                    </h3>
+                    <p className="text-sm font-serif italic text-foreground/70 mb-4">
+                      — {poem.author}
+                    </p>
+                    <p className="font-serif text-foreground/80 italic text-sm leading-relaxed mb-6 whitespace-pre-line line-clamp-3 bg-background/50 p-3.5 rounded border border-border/40">
+                      "{poem.verses?.length ? poem.verses.slice(0, 3).join('\n') : poem.featuredQuote}"
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-border/50 flex items-center justify-between text-xs">
+                    <span className="text-primary font-medium flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      <BookOpen className="w-3.5 h-3.5" /> {embedUrl ? 'Nghe ngâm thơ & Đọc bài' : 'Đọc & Bình phẩm'}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="text-center px-4">
-                <span className="text-xs font-bold tracking-widest text-primary uppercase mb-3 block">
-                  {poem.category.toUpperCase()}
-                </span>
-                <h3 className="font-serif text-2xl font-bold mb-2 group-hover:text-primary transition-colors">
-                  {poem.title}
-                </h3>
-                <p className="text-sm text-foreground/60 uppercase tracking-widest mb-4">
-                  — {poem.author} —
-                </p>
-                <p className="font-serif text-foreground/80 italic mb-6 leading-relaxed line-clamp-3">
-                  "{poem.featuredQuote || poem.verses[0]}"
-                </p>
-                <span className="text-primary font-medium text-sm tracking-widest uppercase flex items-center justify-center gap-2 group-hover:gap-3 transition-all">
-                  ĐỌC TIẾP <ArrowRight className="w-4 h-4" />
-                </span>
-              </div>
-            </article>
-          ))}
+            );
+          })}
         </div>
       </section>
 
